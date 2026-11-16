@@ -1,6 +1,7 @@
 #ifndef NETWORK_MANAGER_H
 #define NETWORK_MANAGER_H
 
+#include "web_portal.h"
 #include <Arduino.h>
 
 #define MAX_SCANNED_NETWORKS 15

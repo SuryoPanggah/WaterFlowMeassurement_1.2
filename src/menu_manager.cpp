@@ -4,6 +4,7 @@
 #include "sensor_manager.h"
 #include "storage_manager.h"
 #include "network_manager.h"
+#include <WiFi.h>
 #include <U8g2lib.h>
 
 extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
@@ -764,20 +765,20 @@ void renderMenu()
         u8g2.drawStr(0, 61, "SEL:Add  BACK:Del");
         break;
     }
-    case SCR_CONN_TEST:
-    {
+    case SCR_CONN_TEST: {
         u8g2.drawStr(0, 10, "[ CONNECTION TEST ]");
         u8g2.setCursor(0, 26);
         u8g2.print("Mode: ");
         u8g2.print(getActiveGatewayMode() == MODE_WIFI ? "Wi-Fi" : "Bluetooth");
         u8g2.setCursor(0, 38);
         u8g2.print(getNetworkStatusText());
-        if (getActiveGatewayMode() == MODE_WIFI && getSavedWiFiSSID().length() > 0)
-        {
+
+        // Show the ESP32's assigned IP address when Wi-Fi is connected
+        if (getActiveGatewayMode() == MODE_WIFI && isNetworkConnected()) {
             u8g2.setCursor(0, 50);
-            u8g2.print("SSID: ");
-            u8g2.print(getSavedWiFiSSID());
+            u8g2.print("IP: "); u8g2.print(WiFi.localIP());
         }
+
         u8g2.drawStr(0, 62, "Press BACK to return");
         break;
     }
@@ -888,4 +889,59 @@ void renderMenu()
         u8g2.setDrawColor(1);
     }
     u8g2.sendBuffer();
+}
+
+// =========================================================================
+// WEB PORTAL REMOTE SYNCHRONIZATION HOOKS
+// =========================================================================
+void remoteSetSiteAddress(const String& site) {
+    if (site.length() > 0) {
+        activeSiteAddress = site.substring(0, 23);
+        showToast("Site Updated via Web");
+    }
+}
+
+String remoteGetSiteAddress() {
+    return activeSiteAddress;
+}
+
+bool remoteStartTest(uint8_t mode, uint16_t durationMinutes) {
+    if (currentScreen == SCR_TEST_RUNNING) return false;
+    activeTestMode = (mode > 2) ? 0 : mode;
+    targetDurationSec = (uint32_t)durationMinutes * 60UL;
+    resetFlowCounters();
+    testPeakPressure = 0.0f;
+    testStartTime = millis();
+    setSolenoidState(activeTestMode != 1);
+    beepBuzzer(100);
+    changeScreen(SCR_TEST_RUNNING);
+    return true;
+}
+
+void remoteStopAndSaveTest() {
+    if (currentScreen == SCR_TEST_RUNNING) {
+        uint32_t elapsedSec = (millis() - testStartTime) / 1000UL;
+        finishAndSaveTest(elapsedSec);
+    }
+}
+
+void remoteAbortTest() {
+    if (currentScreen == SCR_TEST_RUNNING) {
+        setSolenoidState(false);
+        showToast("Test Aborted via Web");
+        changeScreen(SCR_MAIN_MENU, 0);
+    }
+}
+
+bool remoteIsTestRunning() {
+    return (currentScreen == SCR_TEST_RUNNING);
+}
+
+uint32_t remoteGetRemainingOrElapsedSec() {
+    if (currentScreen != SCR_TEST_RUNNING) return 0;
+    uint32_t elapsed = (millis() - testStartTime) / 1000UL;
+    if (targetDurationSec > 0) {
+        return (elapsed >= targetDurationSec) ? 0 : (targetDurationSec - elapsed);
+    }
+    return elapsed;
 }

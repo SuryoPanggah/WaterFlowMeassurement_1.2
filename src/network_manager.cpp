@@ -17,6 +17,8 @@ static int scannedCount = 0;
 
 // Complete hardware teardown of both radios to guarantee zero overlap
 static void stopAllRadios() {
+    stopWebPortal();
+
     // 1. Shut down Wi-Fi completely
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
@@ -196,6 +198,10 @@ void updateNetwork() {
             SerialBT.println("ACK_SYNC:" + String(synced));
         }
     }
+    if (currentMode == MODE_WIFI && WiFi.status() == WL_CONNECTED) {
+         if (!isWebPortalRunning()) startWebPortal();
+         handleWebPortal();
+     }
 }
 
 uint16_t syncPendingLogs() {

@@ -12,4 +12,13 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
 // Render the active menu screen onto the 128x64 OLED display
 void renderMenu();
 
+// Remote control hooks for the Mobile Web Portal (keeps OLED & Web UI synced)
+void remoteSetSiteAddress(const String& site);
+String remoteGetSiteAddress();
+bool remoteStartTest(uint8_t mode, uint16_t durationMinutes);
+void remoteStopAndSaveTest();
+void remoteAbortTest();
+bool remoteIsTestRunning();
+uint32_t remoteGetRemainingOrElapsedSec();
+
 #endif // MENU_MANAGER_H
