@@ -65,6 +65,26 @@ static String toastMsg = "";
 static unsigned long toastExpireTime = 0;
 static bool toastWasVisible = false;
 
+// Two-way synchronized UI Language State (false = English [default], true = Bahasa Indonesia)
+static bool langIsIndonesian = false;
+
+bool isLanguageIndonesian() {
+    return langIsIndonesian;
+}
+
+void setLanguageIndonesian(bool isId) {
+    if (langIsIndonesian != isId) {
+        langIsIndonesian = isId;
+        needsFullRedraw = true;
+    }
+}
+
+// Helper: returns English or Bahasa Indonesia text based on active language
+static inline const char* TR(const char* en, const char* id) {
+    return langIsIndonesian ? id : en;
+}
+
+
 // Active Site & Test Tracking Variables
 static String activeSiteAddress = "";
 static uint8_t activeTestMode = 0;
@@ -630,7 +650,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             changeScreen(SCR_TOOLS_MENU, 2);
         return;
     }
-    // --- 7. DEVICE STATUS & DEEP SLEEP ---
+    // --- 7. DEVICE SETTINGS & DEEP SLEEP ---
     if (currentScreen == SCR_DEVICE_STATUS)
     {
         if (backPressed)
@@ -638,8 +658,23 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             changeScreen(SCR_MAIN_MENU, 4);
             return;
         }
+        if (upPressed || downPressed)
+        {
+            cursorIdx = (cursorIdx == 0) ? 1 : 0;
+            return;
+        }
         if (selectPressed)
-            enterDeepSleep();
+        {
+            if (cursorIdx == 0)
+            {
+                setLanguageIndonesian(!langIsIndonesian);
+                showToast(TR("Language: English", "Bahasa: Indonesia"));
+            }
+            else
+            {
+                enterDeepSleep();
+            }
+        }
         return;
     }
 }

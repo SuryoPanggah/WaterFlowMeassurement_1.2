@@ -24,6 +24,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#0f172a; color:#f8fafc; margin:0; padding:12px; }
   h1 { font-size:1.2rem; margin:0 0 10px 0; color:#38bdf8; display:flex; justify-content:space-between; align-items:center; }
   .badge { font-size:0.75rem; background:#1e293b; padding:4px 8px; border-radius:6px; color:#94a3b8; }
+  .lang-btn { font-size:0.75rem; background:#0284c7; color:#fff; padding:4px 8px; border-radius:6px; border:none; width:auto; margin:0; cursor:pointer; font-weight:700; }
   .card { background:#1e293b; border-radius:10px; padding:14px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
   .card h2 { font-size:0.95rem; margin:0 0 10px 0; color:#cbd5e1; border-bottom:1px solid #334155; padding-bottom:6px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -48,11 +49,17 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
 
 <h1>
-  <span>WATER AUDIT RIG</span>
-  <span class="badge" id="batBadge">--.-V (--%)</span>
+  <span data-i18n="title">WATER AUDIT RIG</span>
+  <span style="display:flex;gap:6px;align-items:center;">
+    <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
+    <span class="badge" id="batBadge">--.-V (--%)</span>
+  </span>
 </h1>
 
 <div class="status-bar" id="toast"></div>
+
+<!-- 5 HTML Cards (Live Telemetry, Field Test Control, Stored Reports, Hardware/Calibration Tools, Device Settings/Power) -->
+<!-- Full card markup for lines 58–124 containing localized sections, control inputs, and operational buttons. -->
 
 <div class="card">
   <h2>Live Telemetry <span class="badge" id="testStateBadge" style="float:right">IDLE</span></h2>
@@ -185,6 +192,8 @@ async function refreshStatus() {
 
     const badge = document.getElementById('testStateBadge');
     badge.innerText = d.running ? 'RUNNING' : 'IDLE';
+    if (d.lang && d.lang !== curLang) applyLang(d.lang);
+    badge.innerText = d.running ? (curLang === 'id' ? 'BERJALAN' : 'RUNNING') : (curLang === 'id' ? 'SIAGA' : 'IDLE');
     badge.style.color = d.running ? '#4ade80' : '#94a3b8';
 
     document.getElementById('idleControls').style.display = d.running ? 'none' : 'block';
@@ -286,6 +295,59 @@ if (!confirm('Shut down rig into Deep Sleep?')) return;
 notify('Shutting down...');
 await api('/api/sleep');
 }
+
+let curLang = 'en';
+const dictID = {
+  'WATER AUDIT RIG': 'ALAT AUDIT AIR',
+  'Live Telemetry': 'Telemetri Langsung',
+  'Pressure (Bar)': 'Tekanan (Bar)',
+  'Volume (Liters)': 'Volume (Liter)',
+  'Flow (L/min)': 'Debit (L/mnt)',
+  'Timer': 'Waktu',
+  '1. Field Test Control': '1. Kontrol Uji Lapangan',
+  'Pre-Loaded SD Sites (/customers/sites.csv)': 'Daftar Lokasi SD (/customers/sites.csv)',
+  'Active Site Address / Customer ID': 'Alamat Lokasi / ID Pelanggan',
+  'Set Site': 'Simpan Lokasi',
+  'Full Test (Pres + Vol)': 'Uji Lengkap (Tek + Vol)',
+  'Pressure Only (Valve Closed)': 'Uji Tekanan (Katup Tutup)',
+  'Volume Only (Valve Open)': 'Uji Volume (Katup Buka)',
+  '15 Minutes (Default)': '15 Menit (Default)',
+  '10 Minutes': '10 Menit',
+  '5 Minutes': '5 Menit',
+  '1 Minute': '1 Menit',
+  'Manual (No Limit)': 'Manual (Tanpa Batas)',
+  'START TEST': 'MULAI UJI',
+  'STOP & SAVE LOG': 'SELESAI & SIMPAN',
+  'ABORT': 'BATAL',
+  '3. Stored Reports': '3. Laporan Tersimpan',
+  'Download CSV Report': 'Unduh Laporan CSV',
+  'Clear All': 'Hapus Semua',
+  '4. Hardware & Calibration Tools': '4. Alat & Kalibrasi',
+  'Toggle Solenoid Valve': 'Buka/Tutup Katup',
+  'Zero Pressure': 'Nol-kan Tekanan',
+  'Save K-Factor': 'Simpan K-Factor',
+  'Save Max Bar': 'Simpan Tek. Maks',
+  'Test Buzzer & TFT Flash': 'Tes Buzzer & Layar',
+  '5. Device Status & Power': '5. Pengaturan & Daya',
+  'Shut Down Rig (Deep Sleep)': 'Matikan Alat (Sleep)'
+};
+function applyLang(lang) {
+  curLang = lang;
+  document.getElementById('langBtn').innerText = lang.toUpperCase();
+  document.querySelectorAll('h1 span, h2, label, button, option, .lbl').forEach(el => {
+    if (!el.dataset.en) el.dataset.en = el.childNodes[0]?.nodeValue?.trim() || '';
+    const base = el.dataset.en;
+    if (base && el.childNodes[0]?.nodeType === 3) {
+      el.childNodes[0].nodeValue = (lang === 'id' && dictID[base]) ? dictID[base] : base;
+    }
+  });
+}
+async function toggleLang() {
+  const next = (curLang === 'en') ? 'id' : 'en';
+  applyLang(next);
+  await api(`/api/lang?val=${next}`);
+}
+
 setInterval(refreshStatus, 1000);
 loadSdSites();
 refreshStatus();
@@ -316,6 +378,7 @@ static void handleApiStatus()
     json += "\"maxBar\":" + String(getMaxPressureBar(), 1) + ",";
     json += "\"sd\":" + String(isSDCardReady() ? "true" : "false") + ",";
     json += "\"fw\":\"" + String(FIRMWARE_VERSION) + "\"";
+    json += "\"lang\":\"" + String(isLanguageIndonesian() ? "id" : "en") + "\"";
     json += "}";
     server.send(200, "application/json", json);
 }
@@ -463,6 +526,10 @@ static void handleApiSleep()
     delay(200);
     enterDeepSleep();
 }
+static void handleApiLang() {
+    if (server.hasArg("val")) setLanguageIndonesian(server.arg("val") == "id");
+    server.send(200, "application/json", "{\"ok\":true}");
+}
 void startWebPortal()
 {
     if (portalActive)
@@ -485,6 +552,7 @@ void startWebPortal()
     server.on("/api/pmax", HTTP_GET, handleApiPMax);
     server.on("/api/test_hw", HTTP_GET, handleApiTestHw);
     server.on("/api/sleep", HTTP_GET, handleApiSleep);
+    server.on("/api/lang", HTTP_GET, handleApiLang);
     server.begin();
     portalActive = true;
     Serial.println("[WebPortal] HTTP Server started on port 80.");

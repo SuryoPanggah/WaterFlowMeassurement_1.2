@@ -21,4 +21,8 @@ void remoteAbortTest();
 bool remoteIsTestRunning();
 uint32_t remoteGetRemainingOrElapsedSec();
 
+// Two-way synchronized UI language state (false = English [default], true = Bahasa Indonesia)
+bool isLanguageIndonesian();
+void setLanguageIndonesian(bool isId);
+
 #endif // MENU_MANAGER_H

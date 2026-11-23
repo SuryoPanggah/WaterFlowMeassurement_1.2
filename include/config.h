@@ -37,15 +37,15 @@
 // =========================================================================
 #define BTN_UP_PIN                  25
 #define BTN_DOWN_PIN                26
-#define BTN_SELECT_PIN              27      // RTC GPIO: Also acts as Deep Sleep Wake-Up pin
-#define BTN_BACK_PIN                14
+#define BTN_SELECT_PIN              33      // RTC GPIO: Also acts as Deep Sleep Wake-Up pin
+#define BTN_BACK_PIN                32
 #define BUTTON_DEBOUNCE_MS          150
 
 // =========================================================================
 // 5. SENSORS & ACTUATORS (Safe Non-Strapping GPIOs)
 // =========================================================================
-#define FLOW_SENSOR_PIN             33      // YF-B1 pulse interrupt (via 10k/20k divider)
-#define SOLENOID_RELAY_PIN          32      // Songle 12V relay NPN base (zero boot glitch)
+#define FLOW_SENSOR_PIN             14      // YF-B1 pulse interrupt (via 10k/20k divider)
+#define SOLENOID_RELAY_PIN          27      // Songle 12V relay NPN base (zero boot glitch)
 #define BUZZER_PIN                  13      // 3.3V Active status buzzer
 #define PRESSURE_ADC_PIN            34      // ADC1_CH6 (0.5-4.5V via 10k/20k divider + 0.1uF)
 
