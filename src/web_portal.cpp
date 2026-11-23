@@ -303,19 +303,19 @@ static void handleApiStatus()
     float batV = getBatteryVoltage();
     int batPct = getBatteryPercentage(batV);
     String json = "{";
-    json += "\x22batV\x22:" + String(batV, 2) + ",";
-    json += "\x22batPct\x22:" + String(batPct) + ",";
-    json += "\x22pres\x22:" + String(readLivePressureBar(), 2) + ",";
-    json += "\x22vol\x22:" + String(getTotalVolumeLiters(), 2) + ",";
-    json += "\x22flow\x22:" + String(getLiveFlowRateLPM(), 1) + ",";
-    json += "\x22running\x22:" + String(remoteIsTestRunning() ? "true" : "false") + ",";
-    json += "\x22sec\x22:" + String(remoteGetRemainingOrElapsedSec()) + ",";
-    json += "\x22site\x22:\x22" + remoteGetSiteAddress() + "\x22,";
-    json += "\x22valve\x22:" + String(getSolenoidState() ? "true" : "false") + ",";
-    json += "\x22kFactor\x22:" + String(getFlowKFactor(), 2) + ",";
-    json += "\x22maxBar\x22:" + String(getMaxPressureBar(), 1) + ",";
-    json += "\x22sd\x22:" + String(isSDCardReady() ? "true" : "false") + ",";
-    json += "\x22fw\x22:\x22" + String(FIRMWARE_VERSION) + "\x22";
+    json += "\"batV\":" + String(batV, 2) + ",";
+    json += "\"batPct\":" + String(batPct) + ",";
+    json += "\"pres\":" + String(readLivePressureBar(), 2) + ",";
+    json += "\"vol\":" + String(getTotalVolumeLiters(), 2) + ",";
+    json += "\"flow\":" + String(getLiveFlowRateLPM(), 1) + ",";
+    json += "\"running\":" + String(remoteIsTestRunning() ? "true" : "false") + ",";
+    json += "\"sec\":" + String(remoteGetRemainingOrElapsedSec()) + ",";
+    json += "\"site\":\"" + remoteGetSiteAddress() + "\",";
+    json += "\"valve\":" + String(getSolenoidState() ? "true" : "false") + ",";
+    json += "\"kFactor\":" + String(getFlowKFactor(), 2) + ",";
+    json += "\"maxBar\":" + String(getMaxPressureBar(), 1) + ",";
+    json += "\"sd\":" + String(isSDCardReady() ? "true" : "false") + ",";
+    json += "\"fw\":\"" + String(FIRMWARE_VERSION) + "\"";
     json += "}";
     server.send(200, "application/json", json);
 }
@@ -337,7 +337,8 @@ static void handleApiSites()
 static void handleApiLogs()
 {
     uint16_t count = getStoredLogCount();
-    String json = "{\x22count\x22:" + String(count) + ",\x22max\x22:" + String(MAX_STORED_LOGS) + ",\x22logs\x22:[";
+    String json = "{\"count\":" + String(count) + ",\"max\":" + String(MAX_STORED_LOGS) + ",\"logs\":[";
+
     TestLog log;
     bool first = true;
     for (int i = (int)count - 1; i >= 0; i--)
