@@ -144,7 +144,6 @@ void setSolenoidState(bool openValve) {
     }
 
     solenoidIsOpen = openValve;
-    digitalWrite(SOLENOID_RELAY_PIN, openValve ? HIGH : LOW);
     Serial.print("[Sensors] Solenoid Valve: ");
     Serial.println(openValve ? "OPEN" : "CLOSED");
 }

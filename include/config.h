@@ -53,7 +53,14 @@
 // 6. POWER & BATTERY MONITORING (ADC1)
 // =========================================================================
 #define BATTERY_ADC_PIN             35      // ADC1_CH7 (Input only, Wi-Fi safe)
-#define CHARGER_HOLD_PIN        14  // GPIO 14: HIGH = Pause A436 battery charger during solenoid test
+#define CHARGER_HOLD_PIN            2       // GPIO 2: HIGH = Pause A436 charger during solenoid test (Avoids BTN_BACK on GPIO 14)
+
+// --- FUTURE PRODUCTION MULTI-RAIL MONITORING (Uncomment when extra ADC1 pins are available) ---
+// #define AC_SENSE_ADC_PIN     36   // GPIO 36 (VP) - Tapped BEFORE IRM-20-12 blocking diode
+// #define BUS_12V_ADC_PIN      33   // GPIO 33      - Tapped AFTER ORing diodes (+12V Bus)
+// #define RAIL_5V_ADC_PIN      39   // GPIO 39 (VN) - Tapped at MP1584 +5V Output
+// #define DIVIDER_RATIO_5V     2.0f // 10k + 10k divider ((10 + 10) / 10 = 2.0)
+
 #define VOLTAGE_DIVIDER_RATIO       5.7f    // (R1: 47k + R2: 10k) / R2: 10k
 #define BATTERY_MIN_VOLTS           11.5f   // 0% threshold for 4S LiFePO4
 #define BATTERY_MAX_VOLTS           13.6f   // 100% resting threshold for 4S LiFePO4

@@ -10,6 +10,11 @@ void initPowerManager() {
     analogSetAttenuation(ADC_11db);
     pinMode(BATTERY_ADC_PIN, INPUT);
 
+    // --- FUTURE PRODUCTION MULTI-RAIL PINS (Uncomment with config.h) ---
+    // pinMode(AC_SENSE_ADC_PIN, INPUT);
+    // pinMode(BUS_12V_ADC_PIN, INPUT);
+    // pinMode(RAIL_5V_ADC_PIN, INPUT);
+
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
         Serial.println("[Power] Woke up from Deep Sleep via Select Button.");
@@ -35,6 +40,42 @@ int getBatteryPercentage(float voltage) {
     if (voltage >= BATTERY_MAX_VOLTS) return 100;
     return (int)(((voltage - BATTERY_MIN_VOLTS) / (BATTERY_MAX_VOLTS - BATTERY_MIN_VOLTS)) * 100.0f);
 }
+
+// --- FUTURE PRODUCTION MULTI-RAIL TELEMETRY (Uncomment when extra ADC1 pins are available) ---
+/*
+static float readAveragedRail(uint8_t pin, float dividerRatio) {
+    uint32_t adcSum = 0;
+    for (int i = 0; i < 16; i++) {
+        adcSum += analogRead(pin);
+        delay(2);
+    }
+    float avgADC = adcSum / 16.0f;
+    float pinVoltage = (avgADC / 4095.0f) * 3.3f;
+    float railVoltage = pinVoltage * dividerRatio;
+    return (railVoltage > 0.5f) ? (railVoltage + BATTERY_CALIBRATION_OFFSET) : 0.0f;
+}
+
+float getACSupplyVoltage() {
+    return readAveragedRail(AC_SENSE_ADC_PIN, VOLTAGE_DIVIDER_RATIO);
+}
+
+float getBus12VVoltage() {
+    return readAveragedRail(BUS_12V_ADC_PIN, VOLTAGE_DIVIDER_RATIO);
+}
+
+float getRail5VVoltage() {
+    return readAveragedRail(RAIL_5V_ADC_PIN, DIVIDER_RATIO_5V);
+}
+
+bool isACPowerActive() {
+    // IRM-20-12 outputs ~12.0V before the blocking diode when 220V AC is plugged in
+    return (getACSupplyVoltage() > 8.0f);
+}
+
+String getPowerSourceText() {
+    return isACPowerActive() ? "AC MAINS" : "DC BATTERY";
+}
+*/
 
 void enterDeepSleep() {
     Serial.println("[Power] Preparing for Deep Sleep shutdown...");

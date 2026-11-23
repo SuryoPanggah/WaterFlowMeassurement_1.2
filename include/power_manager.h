@@ -15,4 +15,11 @@ int getBatteryPercentage(float voltage);
 // Safely close the solenoid, turn off the OLED, and enter Deep Sleep until BTN_SELECT is pressed
 void enterDeepSleep();
 
+// --- FUTURE PRODUCTION MULTI-RAIL MONITORING (Uncomment when extra ADC1 pins are available) ---
+// float getACSupplyVoltage();
+// float getBus12VVoltage();
+// float getRail5VVoltage();
+// bool isACPowerActive();
+// String getPowerSourceText();
+
 #endif // POWER_MANAGER_H

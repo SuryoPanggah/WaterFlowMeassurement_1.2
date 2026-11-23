@@ -1072,6 +1072,27 @@ void renderMenu()
         tft.setCursor(22, 156);
         tft.print("Firmware: ");
         tft.print(FIRMWARE_VERSION);
+
+        // --- FUTURE PRODUCTION MULTI-RAIL DISPLAY (Uncomment with power_manager.cpp) ---
+        /*
+        float v12 = getBus12VVoltage();
+        float v5  = getRail5VVoltage();
+
+        tft.setTextColor(COL_ACCENT, COL_CARD);
+        tft.setTextSize(2);
+        tft.setCursor(20, 122);
+        tft.print("Source : ");
+        tft.print(getPowerSourceText());
+
+        tft.setTextColor(COL_TEXT, COL_CARD);
+        tft.setCursor(20, 150);
+        tft.print("12V Bus: ");
+        tft.print(v12, 1);
+        tft.print("V  5V: ");
+        tft.print(v5, 1);
+        tft.print("V");
+        */
+
         break;
     }
     }
