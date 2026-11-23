@@ -1,0 +1,411 @@
+<svg class="light" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 793.1 974" width="793.1" height="974" id="m7ff6eb__root" data-diagram-type="ascii">
+  <style data-mercat-style="universal">.mercat text{font-family:'Google Sans',Roboto,Arial,sans-serif;fill:var(--m-text);dominant-baseline:central}.mercat .m-node .m-shape{fill:var(--m-node-fill);stroke:var(--m-node-stroke);stroke-width:1.5px}.mercat .m-edge .m-path{fill:none;stroke:var(--m-line);stroke-width:1.5px}.mercat .m-note .m-shape{fill:var(--m-note-fill);stroke:var(--m-note-stroke);stroke-width:1px}.mercat .m-note .m-label{fill:var(--m-note-text)}.mercat .t-label{font-size:13px;font-weight:500}</style>
+  <style data-mercat-style="theme-light">#m7ff6eb__root{--m-bg:#ffffff;--m-text:#1f1f1f;--m-line:#545454;--m-node-fill:#f8f9fa;--m-node-stroke:#747775;--m-note-fill:#fef9e7;--m-note-stroke:#f39c12;--m-note-text:#1f1f1f}</style>
+  <style data-mercat-style="theme-dark">#m7ff6eb__root.dark{--m-bg:#1f1f1f;--m-text:#e3e3e3;--m-line:#bfbfbf;--m-node-fill:#2d2e30;--m-node-stroke:#8e918f;--m-note-fill:#69550d;--m-note-stroke:#f39c12;--m-note-text:#e3e3e3}</style>
+  <style data-mercat-style="type">#m7ff6eb__root .rect-pill{fill:var(--m-bg);stroke:var(--m-node-stroke);stroke-width:1.5px}#m7ff6eb__root .label-text{fill:var(--m-text);font-size:13px;font-weight:500;white-space:pre}#m7ff6eb__root .arrow-line,#m7ff6eb__root .bus-line{fill:none;stroke:var(--m-line);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:round}#m7ff6eb__root .annotation-text{fill:var(--m-text);font-size:12px;font-weight:500;white-space:pre}</style>
+  <style data-mercat-style="diagram">#m7ff6eb__root text{font-family:Google Sans Mono, Roboto Mono, monospace}</style>
+  <g class="mercat mercat-ascii">
+    <defs>
+      <marker id="m7ff6eb__mk-arrow" refX="9.45" refY="3.4" markerWidth="10.8" markerHeight="6.8" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+        <path d="M 0 0 L 10.8 3.4 L 0 6.8 Z" class="m-marker" fill="var(--m-line)" stroke="none"/>
+      </marker>
+    </defs>
+    <g class="m-node shape inner" id="m7ff6eb__node__n0" data-role="step">
+      <rect x="289" y="169" width="98" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="338" y="179" class="m-label t-label label-text" text-anchor="middle">Pres + Vol</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n1" data-role="step">
+      <rect x="321.6" y="191" width="66.8" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="355" y="201" class="m-label t-label label-text" text-anchor="middle">Closed</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n2" data-role="step">
+      <rect x="303.9" y="213" width="51.2" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="329.5" y="223" class="m-label t-label label-text" text-anchor="middle">Open</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n3" data-role="step">
+      <rect x="364.45" y="257" width="74.6" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="401.75" y="267" class="m-label t-label label-text" text-anchor="middle">Default</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n4" data-role="step">
+      <rect x="330.8" y="345" width="82.4" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="372" y="355" class="m-label t-label label-text" text-anchor="middle">No Limit</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n5" data-role="step">
+      <rect x="320.55" y="389" width="43.4" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="342.25" y="399" class="m-label t-label label-text" text-anchor="middle">SEL</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n6" data-role="step">
+      <rect x="320.9" y="411" width="51.2" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="346.5" y="421" class="m-label t-label label-text" text-anchor="middle">BACK</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n7" data-role="step">
+      <rect x="245.1" y="521" width="66.8" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="278.5" y="531" class="m-label t-label label-text" text-anchor="middle">Web UI</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n8" data-role="step">
+      <rect x="201.9" y="565" width="51.2" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="227.5" y="575" class="m-label t-label label-text" text-anchor="middle">Scan</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n9" data-role="step">
+      <rect x="626.55" y="653" width="43.4" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="648.25" y="663" class="m-label t-label label-text" text-anchor="middle">SEL</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n10" data-role="step">
+      <rect x="262.1" y="741" width="66.8" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="295.5" y="751" class="m-label t-label label-text" text-anchor="middle">Toggle</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n11" data-role="step">
+      <rect x="83.25" y="917" width="59" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="112.75" y="927" class="m-label t-label label-text" text-anchor="middle">UP/DN</text>
+    </g>
+    <g class="m-node shape inner" id="m7ff6eb__node__n12" data-role="step">
+      <rect x="82.55" y="939" width="43.4" height="20" rx="3" ry="3" class="m-shape rect-pill"/>
+      <text x="104.25" y="949" class="m-label t-label label-text" text-anchor="middle">SEL</text>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a1__0" data-role="connector">
+      <line x1="19.25" y1="47" x2="36.25" y2="47" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a2__0" data-role="connector">
+      <line x1="53.25" y1="69" x2="70.25" y2="69" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a3__0" data-role="connector">
+      <line x1="87.25" y1="91" x2="104.25" y2="91" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a4__0" data-role="connector">
+      <line x1="87.25" y1="113" x2="104.25" y2="113" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a4__a5__0" data-role="connector">
+      <line x1="423" y1="113" x2="447.15" y2="113" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a6__0" data-role="connector">
+      <line x1="87.25" y1="135" x2="104.25" y2="135" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a6__a7__0" data-role="connector">
+      <line x1="448.5" y1="135" x2="472.65" y2="135" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a8__0" data-role="connector">
+      <line x1="121.25" y1="157" x2="138.25" y2="157" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a9__0" data-role="connector">
+      <line x1="155.25" y1="179" x2="172.25" y2="179" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a11__0" data-role="connector">
+      <line x1="155.25" y1="201" x2="172.25" y2="201" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a13__0" data-role="connector">
+      <line x1="155.25" y1="223" x2="172.25" y2="223" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a15__0" data-role="connector">
+      <line x1="189.25" y1="245" x2="206.25" y2="245" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a16__0" data-role="connector">
+      <line x1="223.25" y1="267" x2="240.25" y2="267" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a18__0" data-role="connector">
+      <line x1="223.25" y1="289" x2="240.25" y2="289" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a19__0" data-role="connector">
+      <line x1="223.25" y1="311" x2="240.25" y2="311" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a20__0" data-role="connector">
+      <line x1="223.25" y1="333" x2="240.25" y2="333" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a21__0" data-role="connector">
+      <line x1="223.25" y1="355" x2="240.25" y2="355" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a23__0" data-role="connector">
+      <line x1="257.25" y1="377" x2="274.25" y2="377" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__n5__0" data-role="connector">
+      <line x1="291.25" y1="399" x2="320.55" y2="399" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__n6__0" data-role="connector">
+      <line x1="291.25" y1="421" x2="320.9" y2="421" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a26__0" data-role="connector">
+      <line x1="19.25" y1="465" x2="36.25" y2="465" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a27__0" data-role="connector">
+      <line x1="53.25" y1="487" x2="70.25" y2="487" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a28__0" data-role="connector">
+      <line x1="53.25" y1="509" x2="70.25" y2="509" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a29__0" data-role="connector">
+      <line x1="87.25" y1="531" x2="104.25" y2="531" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a30__0" data-role="connector">
+      <line x1="87.25" y1="553" x2="104.25" y2="553" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a31__0" data-role="connector">
+      <line x1="53.25" y1="575" x2="70.25" y2="575" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a32__a33__0" data-role="connector">
+      <line x1="372" y1="575" x2="396.15" y2="575" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a33__a34__0" data-role="connector">
+      <line x1="533.5" y1="575" x2="557.65" y2="575" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a35__0" data-role="connector">
+      <line x1="53.25" y1="597" x2="70.25" y2="597" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a36__0" data-role="connector">
+      <line x1="19.25" y1="641" x2="36.25" y2="641" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a37__0" data-role="connector">
+      <line x1="53.25" y1="663" x2="70.25" y2="663" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a37__a38__0" data-role="connector">
+      <line x1="372" y1="663" x2="396.15" y2="663" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a40__0" data-role="connector">
+      <line x1="53.25" y1="685" x2="70.25" y2="685" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a40__a41__0" data-role="connector">
+      <line x1="414.5" y1="685" x2="438.65" y2="685" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a42__0" data-role="connector">
+      <line x1="19.25" y1="729" x2="36.25" y2="729" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a43__0" data-role="connector">
+      <line x1="53.25" y1="751" x2="70.25" y2="751" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a45__0" data-role="connector">
+      <line x1="53.25" y1="773" x2="70.25" y2="773" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a46__0" data-role="connector">
+      <line x1="53.25" y1="795" x2="70.25" y2="795" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a47__0" data-role="connector">
+      <line x1="53.25" y1="817" x2="70.25" y2="817" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a47__a48__0" data-role="connector">
+      <line x1="448.5" y1="817" x2="472.65" y2="817" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a49__0" data-role="connector">
+      <line x1="53.25" y1="839" x2="70.25" y2="839" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a49__a50__0" data-role="connector">
+      <line x1="448.5" y1="839" x2="472.65" y2="839" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a51__0" data-role="connector">
+      <line x1="19.25" y1="883" x2="36.25" y2="883" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__a52__0" data-role="connector">
+      <line x1="53.25" y1="905" x2="70.25" y2="905" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__n11__0" data-role="connector">
+      <line x1="53.25" y1="927" x2="83.25" y2="927" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a53__a54__0" data-role="connector">
+      <line x1="364.85" y1="927" x2="387.65" y2="927" class="m-path arrow-line" marker-start="url(#m7ff6eb__mk-arrow)" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__a55__pt__0" data-role="connector">
+      <line x1="576" y1="927" x2="551.85" y2="927" class="m-path arrow-line" marker-end="url(#m7ff6eb__mk-arrow)"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__n12__0" data-role="connector">
+      <line x1="53.25" y1="949" x2="82.55" y2="949" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__0" data-role="connector">
+      <line x1="19.25" y1="47" x2="19.25" y2="883" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__1" data-role="connector">
+      <line x1="53.25" y1="487" x2="53.25" y2="597" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__2" data-role="connector">
+      <line x1="53.25" y1="663" x2="53.25" y2="685" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__3" data-role="connector">
+      <line x1="53.25" y1="751" x2="53.25" y2="839" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__4" data-role="connector">
+      <line x1="53.25" y1="905" x2="53.25" y2="949" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__5" data-role="connector">
+      <line x1="87.25" y1="91" x2="87.25" y2="135" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__6" data-role="connector">
+      <line x1="87.25" y1="531" x2="87.25" y2="553" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__7" data-role="connector">
+      <line x1="155.25" y1="179" x2="155.25" y2="223" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__8" data-role="connector">
+      <line x1="223.25" y1="267" x2="223.25" y2="355" class="m-path bus-line"/>
+    </g>
+    <g class="m-edge" id="m7ff6eb__edge__pt__pt__9" data-role="connector">
+      <line x1="291.25" y1="399" x2="291.25" y2="421" class="m-path bus-line"/>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a0" data-role="annotation">
+      <text x="15" y="25" class="m-label t-label annotation-text" text-anchor="start">MAIN MENU</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a1" data-role="annotation">
+      <text x="49" y="47" class="m-label t-label annotation-text" text-anchor="start">1. Start Field Test (Mulai Uji Lapangan)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a2" data-role="annotation">
+      <text x="83" y="69" class="m-label t-label annotation-text" text-anchor="start">SITE LOCATION (Lokasi Pengujian)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a3" data-role="annotation">
+      <text x="117" y="91" class="m-label t-label annotation-text" text-anchor="start">&gt; Use Current Site (Gunakan Lokasi Aktif)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a4" data-role="annotation">
+      <text x="117" y="113" class="m-label t-label annotation-text" text-anchor="start">&gt; Pick from SD (Pilih dari SD Card)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a5" data-role="annotation">
+      <text x="457" y="113" class="m-label t-label annotation-text" text-anchor="start">SD SITES LIST (Scroll &amp; Select)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a6" data-role="annotation">
+      <text x="117" y="135" class="m-label t-label annotation-text" text-anchor="start">&gt; Type New Address (Ketik Alamat Baru)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a7" data-role="annotation">
+      <text x="482.5" y="135" class="m-label t-label annotation-text" text-anchor="start">VIRTUAL KEYBOARD</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a8" data-role="annotation">
+      <text x="151" y="157" class="m-label t-label annotation-text" text-anchor="start">SELECT TEST MODE (Pilih Mode Uji)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a9" data-role="annotation">
+      <text x="185" y="179" class="m-label t-label annotation-text" text-anchor="start">&gt; Full Test</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a10" data-role="annotation">
+      <text x="397.5" y="179" class="m-label t-label annotation-text" text-anchor="start">(Uji Lengkap)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a11" data-role="annotation">
+      <text x="185" y="201" class="m-label t-label annotation-text" text-anchor="start">&gt; Pressure Only</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a12" data-role="annotation">
+      <text x="397.5" y="201" class="m-label t-label annotation-text" text-anchor="start">(Uji Tekanan Saja)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a13" data-role="annotation">
+      <text x="185" y="223" class="m-label t-label annotation-text" text-anchor="start">&gt; Volume Only</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a14" data-role="annotation">
+      <text x="363.5" y="223" class="m-label t-label annotation-text" text-anchor="start">(Uji Volume Saja)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a15" data-role="annotation">
+      <text x="219" y="245" class="m-label t-label annotation-text" text-anchor="start">TEST DURATION (Durasi Pengujian)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a16" data-role="annotation">
+      <text x="253" y="267" class="m-label t-label annotation-text" text-anchor="start">&gt; 15 Minutes</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a17" data-role="annotation">
+      <text x="448.5" y="267" class="m-label t-label annotation-text" text-anchor="start">(15 Menit)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a18" data-role="annotation">
+      <text x="253" y="289" class="m-label t-label annotation-text" text-anchor="start">&gt; 10 Minutes (10 Menit)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a19" data-role="annotation">
+      <text x="253" y="311" class="m-label t-label annotation-text" text-anchor="start">&gt; 5 Minutes (5 Menit)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a20" data-role="annotation">
+      <text x="253" y="333" class="m-label t-label annotation-text" text-anchor="start">&gt; 1 Minute (1 Menit)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a21" data-role="annotation">
+      <text x="253" y="355" class="m-label t-label annotation-text" text-anchor="start">&gt; Manual</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a22" data-role="annotation">
+      <text x="423" y="355" class="m-label t-label annotation-text" text-anchor="start">(Manual)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a23" data-role="annotation">
+      <text x="287" y="377" class="m-label t-label annotation-text" text-anchor="start">TEST RUNNING (Pengujian Berjalan - Live Telemetry)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a24" data-role="annotation">
+      <text x="380.5" y="399" class="m-label t-label annotation-text" text-anchor="start">Stop &amp; Save Log (Simpan Log)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a25" data-role="annotation">
+      <text x="380.5" y="421" class="m-label t-label annotation-text" text-anchor="start">Abort Test (Batalkan)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a26" data-role="annotation">
+      <text x="49" y="465" class="m-label t-label annotation-text" text-anchor="start">2. Network / Sync (Jaringan &amp; Sinkronisasi)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a27" data-role="annotation">
+      <text x="83" y="487" class="m-label t-label annotation-text" text-anchor="start">&gt; Sync Pending Logs (Kirim Log Tertunda)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a28" data-role="annotation">
+      <text x="83" y="509" class="m-label t-label annotation-text" text-anchor="start">&gt; Select Gateway Mode (Pilih Mode Jaringan)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a29" data-role="annotation">
+      <text x="117" y="531" class="m-label t-label annotation-text" text-anchor="start">&gt; Wi-Fi Client</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a30" data-role="annotation">
+      <text x="117" y="553" class="m-label t-label annotation-text" text-anchor="start">&gt; Bluetooth Classic SPP</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a31" data-role="annotation">
+      <text x="83" y="575" class="m-label t-label annotation-text" text-anchor="start">&gt; Setup Wi-Fi</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a32" data-role="annotation">
+      <text x="261.5" y="575" class="m-label t-label annotation-text" text-anchor="start">(Atur Wi-Fi)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a33" data-role="annotation">
+      <text x="406" y="575" class="m-label t-label annotation-text" text-anchor="start">WIFI SCAN LIST</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a34" data-role="annotation">
+      <text x="567.5" y="575" class="m-label t-label annotation-text" text-anchor="start">VIRTUAL KEYBOARD (Password)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a35" data-role="annotation">
+      <text x="83" y="597" class="m-label t-label annotation-text" text-anchor="start">&gt; Connection Status (Status Koneksi &amp; IP)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a36" data-role="annotation">
+      <text x="49" y="641" class="m-label t-label annotation-text" text-anchor="start">3. Stored Data (Data Tersimpan)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a37" data-role="annotation">
+      <text x="83" y="663" class="m-label t-label annotation-text" text-anchor="start">&gt; View FRAM Logs (Lihat Log FRAM)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a38" data-role="annotation">
+      <text x="406" y="663" class="m-label t-label annotation-text" text-anchor="start">LOG VIEWER (Scroll Logs /</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a39" data-role="annotation">
+      <text x="678" y="663" class="m-label t-label annotation-text" text-anchor="start">Delete)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a40" data-role="annotation">
+      <text x="83" y="685" class="m-label t-label annotation-text" text-anchor="start">&gt; Clear FRAM Memory (Hapus Semua Data)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a41" data-role="annotation">
+      <text x="448.5" y="685" class="m-label t-label annotation-text" text-anchor="start">CONFIRM ERASE (Yes / No)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a42" data-role="annotation">
+      <text x="49" y="729" class="m-label t-label annotation-text" text-anchor="start">4. Hardware Tools (Alat &amp; Kalibrasi)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a43" data-role="annotation">
+      <text x="83" y="751" class="m-label t-label annotation-text" text-anchor="start">&gt; Valve: OPEN/CLOSED</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a44" data-role="annotation">
+      <text x="338" y="751" class="m-label t-label annotation-text" text-anchor="start">(Buka/Tutup Katup)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a45" data-role="annotation">
+      <text x="83" y="773" class="m-label t-label annotation-text" text-anchor="start">&gt; Zero Pressure Sensor (Nol-kan Sensor Tekanan)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a46" data-role="annotation">
+      <text x="83" y="795" class="m-label t-label annotation-text" text-anchor="start">&gt; Test Buzzer &amp; TFT (Tes Buzzer &amp; Layar)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a47" data-role="annotation">
+      <text x="83" y="817" class="m-label t-label annotation-text" text-anchor="start">&gt; Flow K-Factor Calib (Kalibrasi K-Factor)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a48" data-role="annotation">
+      <text x="482.5" y="817" class="m-label t-label annotation-text" text-anchor="start">UP/DN Adjust, SEL Save</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a49" data-role="annotation">
+      <text x="83" y="839" class="m-label t-label annotation-text" text-anchor="start">&gt; Max Pressure Rating (Batas Tekanan Maks)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a50" data-role="annotation">
+      <text x="482.5" y="839" class="m-label t-label annotation-text" text-anchor="start">UP/DN Adjust, SEL Save</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a51" data-role="annotation">
+      <text x="49" y="883" class="m-label t-label annotation-text" text-anchor="start">5. Device Status (Status Perangkat)</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a52" data-role="annotation">
+      <text x="83" y="905" class="m-label t-label annotation-text" text-anchor="start">Displays: Firmware Version, Battery Voltage &amp; %, Active Language</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a53" data-role="annotation">
+      <text x="151" y="927" class="m-label t-label annotation-text" text-anchor="start">Toggle Language: English</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a54" data-role="annotation">
+      <text x="397.5" y="927" class="m-label t-label annotation-text" text-anchor="start">Bahasa Indonesia</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a55" data-role="annotation">
+      <text x="584.5" y="927" class="m-label t-label annotation-text" text-anchor="start">NEW BILINGUAL SETTING</text>
+    </g>
+    <g class="m-node m-note" id="m7ff6eb__note__a56" data-role="annotation">
+      <text x="151" y="949" class="m-label t-label annotation-text" text-anchor="start">Shut Down Rig / Deep Sleep (Matikan Alat)</text>
+    </g>
+  </g>
+</svg>
