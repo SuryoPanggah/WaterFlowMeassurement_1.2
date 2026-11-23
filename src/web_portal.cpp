@@ -6,16 +6,13 @@
 #include "menu_manager.h"
 #include <WebServer.h>
 #include <ESPmDNS.h>
-#include <U8g2lib.h>
+#include <Adafruit_ILI9341.h>
 
-extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
+extern Adafruit_ILI9341 tft;
 
 static WebServer server(80);
 static bool portalActive = false;
 
-// =========================================================================
-// EMBEDDED MOBILE WEB DASHBOARD (Stored in ESP32 Flash via PROGMEM)
-// =========================================================================
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="en">
@@ -57,21 +54,24 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 <div class="status-bar" id="toast"></div>
 
-<!-- 1. LIVE TELEMETRY -->
 <div class="card">
   <h2>Live Telemetry <span class="badge" id="testStateBadge" style="float:right">IDLE</span></h2>
   <div class="grid">
     <div class="metric"><div class="val" id="presVal">0.00</div><div class="lbl">Pressure (Bar)</div></div>
     <div class="metric"><div class="val" id="volVal">0.00</div><div class="lbl">Volume (Liters)</div></div>
     <div class="metric"><div class="val" id="flowVal">0.0</div><div class="lbl">Flow (L/min)</div></div>
-    <div class="metric"><div class="val" id="timeVal">00:00</div><div class="lbl" id="timeLbl">Timer</div></div>
+    <div class="metric"><div class="val" id="timeVal">00:00</div><div class="lbl">Timer</div></div>
   </div>
 </div>
 
-<!-- 2. START / CONTROL TEST -->
 <div class="card">
   <h2>1. Field Test Control</h2>
-  <label style="font-size:0.78rem;color:#94a3b8;">Site Address / Customer ID</label>
+  <label style="font-size:0.78rem;color:#94a3b8;">Pre-Loaded SD Sites (/customers/sites.csv)</label>
+  <select id="sdSiteSelect" onchange="pickSdSite()">
+    <option value="">-- Select from SD Card --</option>
+  </select>
+
+  <label style="font-size:0.78rem;color:#94a3b8;">Active Site Address / Customer ID</label>
   <div class="row">
     <input type="text" id="siteInput" maxlength="23" placeholder="e.g. JL SUDIRMAN NO 12">
     <button style="width:38%;" onclick="setSite()">Set Site</button>
@@ -101,7 +101,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   </div>
 </div>
 
-<!-- 3. STORED LOGS & CSV EXPORT -->
 <div class="card">
   <h2>3. Stored Reports (<span id="logCount">0/15</span>)</h2>
   <div class="row">
@@ -116,21 +115,23 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   </div>
 </div>
 
-<!-- 4. HARDWARE TOOLS & CALIBRATION -->
 <div class="card">
   <h2>4. Hardware & Calibration Tools</h2>
   <div class="row">
-    <button class="amber" id="valveBtn" onclick="toggleValve()">Toggle Solenoid Valve</button>
+    <button class="amber" onclick="toggleValve()">Toggle Solenoid Valve</button>
     <button class="gray" onclick="zeroPres()">Zero Pressure</button>
   </div>
   <div class="row">
-    <input type="number" step="0.1" id="kInput" placeholder="K-Factor (e.g. 7.5)">
+    <input type="number" step="0.1" id="kInput" placeholder="Flow K-Factor (11.0)">
     <button style="width:45%;" onclick="saveK()">Save K-Factor</button>
   </div>
-  <button class="gray" onclick="testBuzzer()">Test Buzzer & OLED Flash</button>
+  <div class="row">
+    <input type="number" step="0.5" id="maxBarInput" placeholder="Max Pressure Bar (12.0)">
+    <button style="width:45%;" onclick="saveMaxBar()">Save Max Bar</button>
+  </div>
+  <button class="gray" onclick="testBuzzer()">Test Buzzer & TFT Flash</button>
 </div>
 
-<!-- 5. DEVICE STATUS & POWER -->
 <div class="card">
   <h2>5. Device Status & Power</h2>
   <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;" id="fwInfo">Firmware: -- | Solenoid: CLOSED</div>
@@ -147,6 +148,27 @@ function notify(msg) {
 async function api(url) {
   const res = await fetch(url);
   return await res.json();
+}
+
+async function loadSdSites() {
+  try {
+    const d = await api('/api/sites');
+    const sel = document.getElementById('sdSiteSelect');
+    sel.innerHTML = `<option value="">-- Pick from SD (${d.sites.length} sites) --</option>`;
+    d.sites.forEach((s) => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.text = s;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function pickSdSite() {
+  const val = document.getElementById('sdSiteSelect').value;
+  if (val) {
+    document.getElementById('siteInput').value = val;
+    setSite();
+  }
 }
 
 async function refreshStatus() {
@@ -174,7 +196,10 @@ async function refreshStatus() {
     const kEl = document.getElementById('kInput');
     if (document.activeElement !== kEl) kEl.value = d.kFactor.toFixed(2);
 
-    document.getElementById('fwInfo').innerText = `Firmware: ${d.fw} | Solenoid: ${d.valve ? 'OPEN' : 'CLOSED'}`;
+    const pEl = document.getElementById('maxBarInput');
+    if (document.activeElement !== pEl) pEl.value = d.maxBar.toFixed(1);
+
+    document.getElementById('fwInfo').innerText = `FW: ${d.fw} | Valve: ${d.valve ? 'OPEN' : 'CLOSED'} | SD: ${d.sd ? 'OK' : 'NO'}`;
   } catch (e) {}
 }
 
@@ -214,76 +239,69 @@ async function startTest() {
 
 async function stopTest() {
   await api('/api/stop');
-  notify('Test Saved to FRAM');
-  refreshStatus(); refreshLogs();
+notify('Test Saved to FRAM + SD');
+refreshStatus(); refreshLogs();
 }
-
 async function abortTest() {
-  await api('/api/abort');
-  notify('Test Aborted');
-  refreshStatus();
+await api('/api/abort');
+notify('Test Aborted');
+refreshStatus();
 }
-
 async function delLog(idx) {
-  await api(`/api/del_log?idx=${idx}`);
-  notify('Log Deleted');
-  refreshLogs();
+await api(/api/del_log?idx=${idx});
+notify('Log Deleted');
+refreshLogs();
 }
-
 async function clearLogs() {
-  if (!confirm('Erase ALL stored logs from FRAM?')) return;
-  await api('/api/clear_logs');
-  notify('All Logs Cleared');
-  refreshLogs();
+if (!confirm('Erase ALL stored logs from FRAM?')) return;
+await api('/api/clear_logs');
+notify('All Logs Cleared');
+refreshLogs();
 }
-
 async function toggleValve() {
-  const r = await api('/api/valve');
-  notify(r.valve ? 'Solenoid OPENED' : 'Solenoid CLOSED');
-  refreshStatus();
+const r = await api('/api/valve');
+notify(r.valve ? 'Solenoid OPENED' : 'Solenoid CLOSED');
+refreshStatus();
 }
-
 async function zeroPres() {
-  await api('/api/zero');
-  notify('Pressure Sensor Zeroed & Saved');
+await api('/api/zero');
+notify('Pressure Sensor Zeroed & Saved');
 }
-
 async function saveK() {
-  const k = document.getElementById('kInput').value;
-  await api(`/api/kcal?k=${k}`);
-  notify('K-Factor Saved to FRAM');
+const k = document.getElementById('kInput').value;
+await api(/api/kcal?k=${k});
+notify('K-Factor Saved to FRAM');
 }
-
+async function saveMaxBar() {
+const b = document.getElementById('maxBarInput').value;
+await api(/api/pmax?bar=${b});
+notify('Max Pressure Saved to FRAM');
+}
 async function testBuzzer() {
-  await api('/api/test_hw');
-  notify('Buzzer & OLED Tested');
+await api('/api/test_hw');
+notify('Buzzer & TFT Tested');
 }
-
 async function shutdownRig() {
-  if (!confirm('Shut down rig into Deep Sleep?')) return;
-  notify('Shutting down...');
-  await api('/api/sleep');
+if (!confirm('Shut down rig into Deep Sleep?')) return;
+notify('Shutting down...');
+await api('/api/sleep');
 }
-
 setInterval(refreshStatus, 1000);
+loadSdSites();
 refreshStatus();
 refreshLogs();
-</script>
-</body>
-</html>
-)rawliteral";
 
-// =========================================================================
-// HTTP ENDPOINT HANDLERS
-// =========================================================================
-static void handleRoot() {
+
+
+)rawliteral";
+static void handleRoot()
+{
     server.send_P(200, "text/html", INDEX_HTML);
 }
-
-static void handleApiStatus() {
+static void handleApiStatus()
+{
     float batV = getBatteryVoltage();
     int batPct = getBatteryPercentage(batV);
-
     String json = "{";
     json += "\x22batV\x22:" + String(batV, 2) + ",";
     json += "\x22batPct\x22:" + String(batPct) + ",";
@@ -295,21 +313,39 @@ static void handleApiStatus() {
     json += "\x22site\x22:\x22" + remoteGetSiteAddress() + "\x22,";
     json += "\x22valve\x22:" + String(getSolenoidState() ? "true" : "false") + ",";
     json += "\x22kFactor\x22:" + String(getFlowKFactor(), 2) + ",";
+    json += "\x22maxBar\x22:" + String(getMaxPressureBar(), 1) + ",";
+    json += "\x22sd\x22:" + String(isSDCardReady() ? "true" : "false") + ",";
     json += "\x22fw\x22:\x22" + String(FIRMWARE_VERSION) + "\x22";
     json += "}";
-
     server.send(200, "application/json", json);
 }
-
-static void handleApiLogs() {
+static void handleApiSites()
+{
+    uint16_t count = getPreloadedSiteCount();
+    String json = "{\x22sites\x22:[";
+    for (uint16_t i = 0; i < count; i++)
+    {
+        if (i > 0)
+            json += ",";
+        String s = getPreloadedSite(i);
+        s.replace("\x22", "");
+        json += "\x22" + s + "\x22";
+    }
+    json += "]}";
+    server.send(200, "application/json", json);
+}
+static void handleApiLogs()
+{
     uint16_t count = getStoredLogCount();
     String json = "{\x22count\x22:" + String(count) + ",\x22max\x22:" + String(MAX_STORED_LOGS) + ",\x22logs\x22:[";
-
     TestLog log;
     bool first = true;
-    for (int i = (int)count - 1; i >= 0; i--) {
-        if (readTestLogByIndex((uint16_t)i, log)) {
-            if (!first) json += ",";
+    for (int i = (int)count - 1; i >= 0; i--)
+    {
+        if (readTestLogByIndex((uint16_t)i, log))
+        {
+            if (!first)
+                json += ",";
             first = false;
             json += "{";
             json += "\x22idx\x22:" + String(i) + ",";
@@ -324,107 +360,116 @@ static void handleApiLogs() {
     json += "]}";
     server.send(200, "application/json", json);
 }
-
-static void handleApiLogsCSV() {
+static void handleApiLogsCSV()
+{
     uint16_t count = getStoredLogCount();
     String csv = "ID,SITE_ADDRESS,MODE,DURATION,VOLUME,PEAK_PRESSURE,STATUS\n";
     TestLog log;
-
-    for (uint16_t i = 0; i < count; i++) {
-        if (readTestLogByIndex(i, log)) {
+    for (uint16_t i = 0; i < count; i++)
+    {
+        if (readTestLogByIndex(i, log))
+        {
             csv += formatLogAsCSV(log) + "\n";
             markLogAsSynced(i);
         }
     }
-
     server.sendHeader("Content-Disposition", "attachment; filename=\x22water_audit_report.csv\x22");
     server.send(200, "text/csv", csv);
 }
-
-static void handleApiSetSite() {
-    if (server.hasArg("val")) {
+static void handleApiSetSite()
+{
+    if (server.hasArg("val"))
         remoteSetSiteAddress(server.arg("val"));
-    }
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiStart() {
+static void handleApiStart()
+{
     uint8_t mode = server.hasArg("mode") ? (uint8_t)server.arg("mode").toInt() : 0;
     uint16_t dur = server.hasArg("dur") ? (uint16_t)server.arg("dur").toInt() : 15;
     bool ok = remoteStartTest(mode, dur);
     server.send(200, "application/json", ok ? "{\x22ok\x22:true}" : "{\x22ok\x22:false}");
 }
-
-static void handleApiStop() {
+static void handleApiStop()
+{
     remoteStopAndSaveTest();
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiAbort() {
+static void handleApiAbort()
+{
     remoteAbortTest();
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiDelLog() {
-    if (server.hasArg("idx")) {
+static void handleApiDelLog()
+{
+    if (server.hasArg("idx"))
         deleteTestLogByIndex((uint16_t)server.arg("idx").toInt());
-    }
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiClearLogs() {
+static void handleApiClearLogs()
+{
     clearAllStoredLogs();
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiToggleValve() {
+static void handleApiToggleValve()
+{
     bool next = !getSolenoidState();
     setSolenoidState(next);
     server.send(200, "application/json", String("{\x22valve\x22:") + (next ? "true}" : "false}"));
 }
-
-static void handleApiZero() {
+static void handleApiZero()
+{
     zeroPressureSensor();
-    saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset());
+    saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiKCal() {
-    if (server.hasArg("k")) {
+static void handleApiKCal()
+{
+    if (server.hasArg("k"))
+    {
         float k = server.arg("k").toFloat();
-        if (k > 0.1f) {
+        if (k > 0.1f)
+        {
             setFlowKFactor(k);
-            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset());
+            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
         }
     }
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiTestHw() {
-    beepBuzzer(150);
-    u8g2.clearBuffer();
-    u8g2.drawBox(0, 0, 128, 64);
-    u8g2.sendBuffer();
-    delay(400);
+static void handleApiPMax()
+{
+    if (server.hasArg("bar"))
+    {
+        float maxBar = server.arg("bar").toFloat();
+        if (maxBar >= 1.0f && maxBar <= 100.0f)
+        {
+            setMaxPressureBar(maxBar);
+            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
+        }
+    }
     server.send(200, "application/json", "{\x22ok\x22:true}");
 }
-
-static void handleApiSleep() {
+static void handleApiTestHw()
+{
+    beepBuzzer(150);
+    tft.fillScreen(ILI9341_WHITE);
+    delay(300);
+    tft.fillScreen(0x0841);
+    server.send(200, "application/json", "{\x22ok\x22:true}");
+}
+static void handleApiSleep()
+{
     server.send(200, "application/json", "{\x22ok\x22:true}");
     delay(200);
     enterDeepSleep();
 }
-
-// =========================================================================
-// LIFECYCLE MANAGEMENT
-// =========================================================================
-void startWebPortal() {
-    if (portalActive) return;
-
+void startWebPortal()
+{
+    if (portalActive)
+        return;
     MDNS.begin("water-rig");
-
     server.on("/", HTTP_GET, handleRoot);
     server.on("/api/status", HTTP_GET, handleApiStatus);
+    server.on("/api/sites", HTTP_GET, handleApiSites);
     server.on("/api/logs", HTTP_GET, handleApiLogs);
     server.on("/api/logs.csv", HTTP_GET, handleApiLogsCSV);
     server.on("/api/site", HTTP_GET, handleApiSetSite);
@@ -436,28 +481,30 @@ void startWebPortal() {
     server.on("/api/valve", HTTP_GET, handleApiToggleValve);
     server.on("/api/zero", HTTP_GET, handleApiZero);
     server.on("/api/kcal", HTTP_GET, handleApiKCal);
+    server.on("/api/pmax", HTTP_GET, handleApiPMax);
     server.on("/api/test_hw", HTTP_GET, handleApiTestHw);
     server.on("/api/sleep", HTTP_GET, handleApiSleep);
-
     server.begin();
     portalActive = true;
     Serial.println("[WebPortal] HTTP Server started on port 80.");
 }
-
-void stopWebPortal() {
-    if (!portalActive) return;
+void stopWebPortal()
+{
+    if (!portalActive)
+        return;
     server.stop();
     MDNS.end();
     portalActive = false;
     Serial.println("[WebPortal] HTTP Server stopped.");
 }
-
-void handleWebPortal() {
-    if (portalActive) {
+void handleWebPortal()
+{
+    if (portalActive)
+    {
         server.handleClient();
     }
 }
-
-bool isWebPortalRunning() {
+bool isWebPortalRunning()
+{
     return portalActive;
 }

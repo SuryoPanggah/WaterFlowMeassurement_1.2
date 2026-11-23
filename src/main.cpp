@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <U8g2lib.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
 
 #include "config.h"
 #include "power_manager.h"
@@ -9,10 +11,9 @@
 #include "network_manager.h"
 #include "menu_manager.h"
 
-// Global 128x64 I2C OLED display instance (referenced via 'extern' in power_manager & menu_manager)
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, I2C_SCL_PIN, I2C_SDA_PIN);
+// Global 2.8" 320x240 SPI TFT instance using shared hardware/custom SPI bus
+Adafruit_ILI9341 tft = Adafruit_ILI9341(&SPI, TFT_DC_PIN, TFT_CS_PIN, TFT_RST_PIN);
 
-// Button debouncing state trackers (active-low inputs)
 static bool lastUpState = HIGH;
 static bool lastDownState = HIGH;
 static bool lastSelectState = HIGH;
@@ -24,53 +25,65 @@ void setup() {
     delay(200);
     Serial.println("\n=== Water Audit Rig Booting ===");
 
-    // 1. Initialize shared I2C bus for OLED & FRAM
+    // 1. Initialize I2C bus for MB85RC256V FRAM
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN, I2C_CLOCK_SPEED);
 
-    // 2. Configure 4 physical UI buttons with internal pull-ups
+    // 2. Configure 4 physical UI buttons
     pinMode(BTN_UP_PIN, INPUT_PULLUP);
     pinMode(BTN_DOWN_PIN, INPUT_PULLUP);
     pinMode(BTN_SELECT_PIN, INPUT_PULLUP);
     pinMode(BTN_BACK_PIN, INPUT_PULLUP);
 
-    // 3. Initialize OLED display and show boot splash screen
-    u8g2.begin();
-    u8g2.setPowerSave(0); // Ensure display wakes up cleanly after Deep Sleep
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_profont12_mf);
-    u8g2.drawStr(14, 28, "WATER AUDIT RIG");
-    u8g2.setFont(u8g2_font_profont10_mf);
-    u8g2.drawStr(36, 44, FIRMWARE_VERSION);
-    u8g2.sendBuffer();
+    // 3. Deselect both SPI Chip Selects before initializing SPI bus
+    pinMode(TFT_CS_PIN, OUTPUT);
+    digitalWrite(TFT_CS_PIN, HIGH);
+    pinMode(SD_CS_PIN, OUTPUT);
+    digitalWrite(SD_CS_PIN, HIGH);
+    pinMode(TFT_BL_PIN, OUTPUT);
+    digitalWrite(TFT_BL_PIN, HIGH);
 
-    // 4. Initialize hardware modules in safe dependency order
+    SPI.begin(TFT_SCK_PIN, TFT_MISO_PIN, TFT_MOSI_PIN);
+
+    // 4. Initialize 2.8" ILI9341 TFT in Landscape (320x240)
+    tft.begin();
+    tft.setRotation(1);
+    tft.fillScreen(0x0841); // Deep slate background
+    tft.setTextColor(ILI9341_CYAN);
+    tft.setTextSize(3);
+    tft.setCursor(28, 85);
+    tft.print("WATER AUDIT RIG");
+    tft.setTextColor(ILI9341_LIGHTGREY);
+    tft.setTextSize(2);
+    tft.setCursor(120, 125);
+    tft.print(FIRMWARE_VERSION);
+
+    // 5. Initialize Power, Sensors, FRAM & microSD
     initPowerManager();
     initSensorManager();
 
-    // 5. Mount FRAM and restore saved calibration constants into sensor_manager
     if (initStorageManager()) {
         float savedK = DEFAULT_FLOW_K_FACTOR;
         float savedOffset = DEFAULT_PRESSURE_OFFSET;
-        loadCalibrationFromFRAM(savedK, savedOffset);
+        float savedMaxBar = DEFAULT_MAX_PRESSURE_BAR;
+        loadCalibrationFromFRAM(savedK, savedOffset, savedMaxBar);
         setFlowKFactor(savedK);
         setPressureZeroOffset(savedOffset);
+        setMaxPressureBar(savedMaxBar);
     }
 
-    // 6. Initialize Network (Wi-Fi / BT) and Menu State Machine
+    // 6. Initialize Network & TFT Menu Engine
     initNetworkManager();
     initMenuManager();
 
-    delay(800); // Brief pause so engineer sees boot splash
+    delay(800);
     beepBuzzer(60);
     Serial.println("=== System Ready ===");
 }
 
 void loop() {
-    // 1. Update background sensor math (flow rate) and network commands
     updateSensors();
     updateNetwork();
 
-    // 2. Read raw button pins (LOW = pressed)
     bool currUp     = digitalRead(BTN_UP_PIN);
     bool currDown   = digitalRead(BTN_DOWN_PIN);
     bool currSelect = digitalRead(BTN_SELECT_PIN);
@@ -81,7 +94,6 @@ void loop() {
     bool selectTriggered = false;
     bool backTriggered   = false;
 
-    // Edge-detection + debounce: triggers once on falling edge (HIGH -> LOW)
     if ((millis() - lastDebounceTime) > BUTTON_DEBOUNCE_MS) {
         if (lastUpState == HIGH && currUp == LOW)         upTriggered = true;
         if (lastDownState == HIGH && currDown == LOW)     downTriggered = true;
@@ -99,8 +111,6 @@ void loop() {
     lastSelectState = currSelect;
     lastBackState   = currBack;
 
-    // 3. Render current OLED UI frame
     renderMenu();
-
-    delay(15); // ~60 FPS UI loop without blocking interrupts
+    delay(15);
 }

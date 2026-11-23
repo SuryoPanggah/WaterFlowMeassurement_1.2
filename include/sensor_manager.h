@@ -3,10 +3,7 @@
 
 #include <Arduino.h>
 
-// Initialize GPIO pins, hardware interrupts, and default calibration constants
 void initSensorManager();
-
-// Periodic update function (call in main loop to calculate live L/min flow speed)
 void updateSensors();
 
 // --- Water Flow & Volume Functions ---
@@ -17,13 +14,15 @@ void resetFlowCounters();
 
 // --- Water Pressure Functions ---
 float readLivePressureBar();
-void zeroPressureSensor(); // Captures current atmospheric reading as 0.0 Bar
+void zeroPressureSensor();
 
-// --- Calibration Getters & Setters (Used by Menu & FRAM Storage) ---
+// --- Calibration Getters & Setters (Used by Menu, Web Portal & FRAM) ---
 void setFlowKFactor(float kFactor);
 float getFlowKFactor();
 void setPressureZeroOffset(float offset);
 float getPressureZeroOffset();
+void setMaxPressureBar(float maxBar);
+float getMaxPressureBar();
 
 // --- Actuator & Audio Controls ---
 void setSolenoidState(bool openValve);

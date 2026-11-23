@@ -5,9 +5,23 @@
 #include "storage_manager.h"
 #include "network_manager.h"
 #include <WiFi.h>
-#include <U8g2lib.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
 
-extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
+extern Adafruit_ILI9341 tft;
+
+// =========================================================================
+// COLOR PALETTE (RGB565 Dark Industrial Theme for 320x240 TFT)
+// =========================================================================
+#define COL_BG 0x0841     // Deep Slate
+#define COL_HEADER 0x10A2 // Header Bar
+#define COL_CARD 0x18E3   // Card Fill
+#define COL_ACCENT 0x05BF // Sky Blue
+#define COL_TEXT 0xFFFF   // Pure White
+#define COL_MUTED 0x9CD3  // Cool Grey
+#define COL_GREEN 0x2668  // Emerald Green
+#define COL_RED 0xE186    // Alert Red
+#define COL_AMBER 0xFD20  // Warning Amber
 
 // =========================================================================
 // MENU STATE MACHINE DEFINITIONS
@@ -16,6 +30,7 @@ enum ScreenState
 {
     SCR_MAIN_MENU,
     SCR_SITE_SETUP,
+    SCR_SD_SITE_PICKER,
     SCR_SELECT_MODE,
     SCR_SELECT_DURATION,
     SCR_TEST_RUNNING,
@@ -29,7 +44,8 @@ enum ScreenState
     SCR_CLEAR_CONFIRM,
     SCR_TOOLS_MENU,
     SCR_CALIBRATE_FLOW,
-    SCR_OLED_TEST,
+    SCR_CALIBRATE_MAX_PRES,
+    SCR_TFT_TEST,
     SCR_DEVICE_STATUS
 };
 
@@ -41,23 +57,27 @@ enum KeyboardPurpose
 
 static ScreenState currentScreen = SCR_MAIN_MENU;
 static int cursorIdx = 0;
+static bool needsFullRedraw = true;
+static unsigned long lastLiveDrawMs = 0;
 
 // Temporary popup toast banner state
 static String toastMsg = "";
 static unsigned long toastExpireTime = 0;
+static bool toastWasVisible = false;
 
 // Active Site & Test Tracking Variables
-static String activeSiteAddress = "";    // Persists across multiple tests at same site
-static uint8_t activeTestMode = 0;       // 0 = Full, 1 = Pressure Only, 2 = Volume Only
-static uint32_t targetDurationSec = 900; // Default: 15 minutes (900s), 0 = Manual
+static String activeSiteAddress = "";
+static uint8_t activeTestMode = 0;
+static uint32_t targetDurationSec = 900;
 static unsigned long testStartTime = 0;
 static float testPeakPressure = 0.0f;
 
 static const uint16_t durationPresetsMin[] = {15, 10, 5, 1, 0};
 static const int TOTAL_DURATION_PRESETS = 5;
 
-// Log Viewer Scroll Index
+// Log Viewer & SD Site Picker Scroll Indices
 static int logViewIndex = 0;
+static int sdSiteIndex = 0;
 
 // Wi-Fi Scanner & Reusable Virtual Keyboard State
 static int scannedNetCount = 0;
@@ -67,7 +87,6 @@ static String kbInputBuffer = "";
 static int kbMaxLen = 23;
 static int keyCharIndex = 0;
 
-// Character set (includes space ' ' and common address/password symbols; index 78 = [OK])
 static const char *kbChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_./abcdefghijklmnopqrstuvwxyz!@#$%^&*+=?";
 static const int KB_CHAR_LEN = 78;
 
@@ -82,6 +101,7 @@ static void changeScreen(ScreenState nextScreen, int resetCursor = 0)
 {
     currentScreen = nextScreen;
     cursorIdx = resetCursor;
+    needsFullRedraw = true;
 }
 
 static void openKeyboard(KeyboardPurpose purpose, const String &initialText, int maxLen)
@@ -101,7 +121,7 @@ static void finishAndSaveTest(uint32_t elapsedSec)
 
     SaveLogResult res = saveNewTestLog(siteToSave, elapsedSec, totalVol, testPeakPressure, activeTestMode);
     if (res == SAVE_OK)
-        showToast("Test Saved to FRAM!");
+        showToast(isSDCardReady() ? "Saved to FRAM + SD!" : "Test Saved to FRAM!");
     else if (res == SAVE_OVERWROTE_SYNCED)
         showToast("Saved (Old Synced Replaced)");
     else if (res == SAVE_OVERWROTE_PENDING)
@@ -113,10 +133,59 @@ static void finishAndSaveTest(uint32_t elapsedSec)
     changeScreen(SCR_MAIN_MENU, 0);
 }
 
+// =========================================================================
+// TFT DRAWING HELPERS
+// =========================================================================
+static void drawHeader(const String &title)
+{
+    tft.fillRect(0, 0, 320, 32, COL_HEADER);
+    tft.drawFastHLine(0, 32, 320, COL_ACCENT);
+    tft.setTextColor(COL_ACCENT, COL_HEADER);
+    tft.setTextSize(2);
+    tft.setCursor(10, 8);
+    tft.print(title);
+
+    // Top-right SD & Battery status badge
+    float v = getBatteryVoltage();
+    tft.setTextSize(1);
+    tft.setTextColor(isSDCardReady() ? COL_GREEN : COL_MUTED, COL_HEADER);
+    tft.setCursor(220, 6);
+    tft.print(isSDCardReady() ? "[SD OK]" : "[NO SD]");
+    tft.setTextColor(COL_TEXT, COL_HEADER);
+    tft.setCursor(220, 18);
+    tft.print(v, 1);
+    tft.print("V ");
+    tft.print(getBatteryPercentage(v));
+    tft.print("%");
+}
+
+static void drawFooter(const String &hint)
+{
+    tft.fillRect(0, 218, 320, 22, COL_HEADER);
+    tft.setTextColor(COL_MUTED, COL_HEADER);
+    tft.setTextSize(1);
+    tft.setCursor(10, 225);
+    tft.print(hint);
+}
+
+static void drawMenuItem(int row, const String &label, bool selected)
+{
+    int y = 42 + (row * 32);
+    uint16_t bg = selected ? COL_ACCENT : COL_CARD;
+    uint16_t fg = selected ? COL_BG : COL_TEXT;
+    tft.fillRoundRect(10, y, 300, 27, 5, bg);
+    tft.setTextColor(fg, bg);
+    tft.setTextSize(2);
+    tft.setCursor(20, y + 6);
+    tft.print(selected ? "> " : "  ");
+    tft.print(label);
+}
+
 void initMenuManager()
 {
     currentScreen = SCR_MAIN_MENU;
     cursorIdx = 0;
+    needsFullRedraw = true;
 }
 
 // =========================================================================
@@ -127,6 +196,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
     if (!upPressed && !downPressed && !selectPressed && !backPressed)
         return;
     toastExpireTime = 0;
+    needsFullRedraw = true;
 
     // --- 1. MAIN MENU ---
     if (currentScreen == SCR_MAIN_MENU)
@@ -138,9 +208,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         if (selectPressed)
         {
             if (cursorIdx == 0)
-            {
                 changeScreen(SCR_SITE_SETUP, activeSiteAddress.length() > 0 ? 0 : 1);
-            }
             else if (cursorIdx == 1)
                 changeScreen(SCR_NETWORK_MENU);
             else if (cursorIdx == 2)
@@ -153,7 +221,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         return;
     }
 
-    // --- 2. SITE SETUP -> SELECT MODE -> SET DURATION ---
+    // --- 2. SITE SETUP -> SD PICKER / KEYBOARD -> MODE -> DURATION ---
     if (currentScreen == SCR_SITE_SETUP)
     {
         if (backPressed)
@@ -161,25 +229,57 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             changeScreen(SCR_MAIN_MENU, 0);
             return;
         }
-        if (upPressed || downPressed)
-            cursorIdx = (cursorIdx == 0) ? 1 : 0;
+        if (upPressed)
+            cursorIdx = (cursorIdx <= 0) ? 2 : cursorIdx - 1;
+        if (downPressed)
+            cursorIdx = (cursorIdx >= 2) ? 0 : cursorIdx + 1;
         if (selectPressed)
         {
             if (cursorIdx == 0)
             {
                 if (activeSiteAddress.length() == 0)
-                {
                     showToast("Set Site Address First!");
-                }
+                else
+                    changeScreen(SCR_SELECT_MODE, 0);
+            }
+            else if (cursorIdx == 1)
+            {
+                uint16_t count = getPreloadedSiteCount();
+                if (count == 0)
+                    count = reloadSitesFromSD();
+                if (count == 0)
+                    showToast("No sites.csv on SD!");
                 else
                 {
-                    changeScreen(SCR_SELECT_MODE, 0);
+                    sdSiteIndex = 0;
+                    changeScreen(SCR_SD_SITE_PICKER, 0);
                 }
             }
             else
             {
                 openKeyboard(KB_FOR_SITE_ADDR, activeSiteAddress, 23);
             }
+        }
+        return;
+    }
+
+    if (currentScreen == SCR_SD_SITE_PICKER)
+    {
+        uint16_t total = getPreloadedSiteCount();
+        if (backPressed || total == 0)
+        {
+            changeScreen(SCR_SITE_SETUP, 1);
+            return;
+        }
+        if (upPressed)
+            sdSiteIndex = (sdSiteIndex <= 0) ? (total - 1) : sdSiteIndex - 1;
+        if (downPressed)
+            sdSiteIndex = (sdSiteIndex >= (int)total - 1) ? 0 : sdSiteIndex + 1;
+        if (selectPressed)
+        {
+            activeSiteAddress = getPreloadedSite((uint16_t)sdSiteIndex);
+            showToast("Selected: " + activeSiteAddress);
+            changeScreen(SCR_SELECT_MODE, 0);
         }
         return;
     }
@@ -218,11 +318,9 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         {
             uint16_t chosenMins = durationPresetsMin[cursorIdx];
             targetDurationSec = (uint32_t)chosenMins * 60UL;
-
             resetFlowCounters();
             testPeakPressure = 0.0f;
             testStartTime = millis();
-
             setSolenoidState(activeTestMode != 1);
             beepBuzzer(100);
             changeScreen(SCR_TEST_RUNNING);
@@ -247,7 +345,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         return;
     }
 
-    // --- 4. NETWORK / SYNC MENU & WIFI SETUP ---
+    // --- 4. NETWORK / SYNC MENU ---
     if (currentScreen == SCR_NETWORK_MENU)
     {
         if (backPressed)
@@ -272,11 +370,12 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             }
             else if (cursorIdx == 2)
             {
-                u8g2.clearBuffer();
-                u8g2.setFont(u8g2_font_profont11_mf);
-                u8g2.drawStr(15, 34, "Scanning Wi-Fi...");
-                u8g2.sendBuffer();
-
+                tft.fillScreen(COL_BG);
+                drawHeader("WIFI SCANNER");
+                tft.setTextColor(COL_TEXT, COL_BG);
+                tft.setTextSize(2);
+                tft.setCursor(45, 110);
+                tft.print("Scanning Wi-Fi...");
                 scannedNetCount = scanAvailableWiFiNetworks();
                 if (scannedNetCount == 0)
                     showToast("No Wi-Fi Found");
@@ -290,7 +389,6 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         }
         return;
     }
-
     if (currentScreen == SCR_GATEWAY_SELECT)
     {
         if (backPressed)
@@ -308,7 +406,6 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         }
         return;
     }
-
     if (currentScreen == SCR_WIFI_SCAN_LIST)
     {
         if (backPressed)
@@ -329,8 +426,6 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         }
         return;
     }
-
-    // --- REUSABLE VIRTUAL KEYBOARD (SITE ADDRESS & WIFI PASSWORD) ---
     if (currentScreen == SCR_VIRTUAL_KEYBOARD)
     {
         if (upPressed)
@@ -350,9 +445,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
                 else
                 {
                     if (kbInputBuffer.length() == 0)
-                    {
                         showToast("Address Cannot Be Empty");
-                    }
                     else
                     {
                         activeSiteAddress = kbInputBuffer;
@@ -361,27 +454,17 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
                     }
                 }
             }
-            else
+            else if ((int)kbInputBuffer.length() < kbMaxLen)
             {
-                if ((int)kbInputBuffer.length() < kbMaxLen)
-                {
-                    kbInputBuffer += kbChars[keyCharIndex];
-                }
+                kbInputBuffer += kbChars[keyCharIndex];
             }
         }
         if (backPressed)
         {
             if (kbInputBuffer.length() > 0)
-            {
                 kbInputBuffer.remove(kbInputBuffer.length() - 1);
-            }
             else
-            {
-                if (kbPurpose == KB_FOR_WIFI_PASS)
-                    changeScreen(SCR_NETWORK_MENU, 2);
-                else
-                    changeScreen(SCR_SITE_SETUP, 1);
-            }
+                changeScreen(kbPurpose == KB_FOR_WIFI_PASS ? SCR_NETWORK_MENU : SCR_SITE_SETUP, 2);
         }
         return;
     }
@@ -437,11 +520,11 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
         {
             deleteTestLogByIndex((uint16_t)logViewIndex);
             showToast("Log Deleted");
-            uint16_t remaining = getStoredLogCount();
-            if (remaining == 0)
+            uint16_t rem = getStoredLogCount();
+            if (rem == 0)
                 changeScreen(SCR_STORAGE_MENU, 0);
-            else if (logViewIndex >= remaining)
-                logViewIndex = remaining - 1;
+            else if (logViewIndex >= rem)
+                logViewIndex = rem - 1;
         }
         return;
     }
@@ -459,7 +542,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             if (cursorIdx == 0)
             {
                 clearAllStoredLogs();
-                showToast("All Memory Cleared");
+                showToast("FRAM Logs Cleared");
             }
             changeScreen(SCR_STORAGE_MENU, 1);
         }
@@ -474,9 +557,9 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             return;
         }
         if (upPressed)
-            cursorIdx = (cursorIdx <= 0) ? 3 : cursorIdx - 1;
+            cursorIdx = (cursorIdx <= 0) ? 4 : cursorIdx - 1;
         if (downPressed)
-            cursorIdx = (cursorIdx >= 3) ? 0 : cursorIdx + 1;
+            cursorIdx = (cursorIdx >= 4) ? 0 : cursorIdx + 1;
         if (selectPressed)
         {
             if (cursorIdx == 0)
@@ -488,17 +571,21 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             else if (cursorIdx == 1)
             {
                 zeroPressureSensor();
-                saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset());
+                saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
                 showToast("Pressure Zeroed!");
             }
             else if (cursorIdx == 2)
             {
                 beepBuzzer(150);
-                changeScreen(SCR_OLED_TEST);
+                changeScreen(SCR_TFT_TEST);
             }
             else if (cursorIdx == 3)
             {
                 changeScreen(SCR_CALIBRATE_FLOW);
+            }
+            else if (cursorIdx == 4)
+            {
+                changeScreen(SCR_CALIBRATE_MAX_PRES);
             }
         }
         return;
@@ -512,7 +599,7 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             setFlowKFactor(k - 0.1f);
         if (selectPressed)
         {
-            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset());
+            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
             showToast("K-Factor Saved!");
             changeScreen(SCR_TOOLS_MENU, 3);
         }
@@ -520,13 +607,30 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
             changeScreen(SCR_TOOLS_MENU, 3);
         return;
     }
-    if (currentScreen == SCR_OLED_TEST)
+    if (currentScreen == SCR_CALIBRATE_MAX_PRES)
+    {
+        float maxBar = getMaxPressureBar();
+        if (upPressed)
+            setMaxPressureBar(maxBar + 0.5f);
+        if (downPressed)
+            setMaxPressureBar(maxBar - 0.5f);
+        if (selectPressed)
+        {
+            saveCalibrationToFRAM(getFlowKFactor(), getPressureZeroOffset(), getMaxPressureBar());
+            showToast("Max Pressure Saved!");
+            changeScreen(SCR_TOOLS_MENU, 4);
+        }
+        if (backPressed)
+            changeScreen(SCR_TOOLS_MENU, 4);
+        return;
+    }
+    if (currentScreen == SCR_TFT_TEST)
     {
         if (backPressed || selectPressed)
             changeScreen(SCR_TOOLS_MENU, 2);
         return;
     }
-    // --- 7. DEVICE STATUS & DEEP SLEEP SHUTDOWN ---
+    // --- 7. DEVICE STATUS & DEEP SLEEP ---
     if (currentScreen == SCR_DEVICE_STATUS)
     {
         if (backPressed)
@@ -540,87 +644,120 @@ void handleMenuInput(bool upPressed, bool downPressed, bool selectPressed, bool 
     }
 }
 // =========================================================================
-// OLED SCREEN RENDERING ENGINE
+// 2.8" ILI9341 TFT SCREEN RENDERING ENGINE
 // =========================================================================
 void renderMenu()
 {
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_profont11_mf);
+    bool isLiveScreen = (currentScreen == SCR_TEST_RUNNING || currentScreen == SCR_CONN_TEST || currentScreen == SCR_DEVICE_STATUS);
+    bool toastActive = (millis() < toastExpireTime && toastMsg.length() > 0);
+    if (toastWasVisible && !toastActive)
+    {
+        needsFullRedraw = true;
+    }
+    toastWasVisible = toastActive;
+    if (!needsFullRedraw && !isLiveScreen && !toastActive)
+        return;
+    if (!needsFullRedraw && isLiveScreen && (millis() - lastLiveDrawMs < 250))
+        return;
+    lastLiveDrawMs = millis();
+    if (needsFullRedraw && currentScreen != SCR_TFT_TEST)
+    {
+        tft.fillScreen(COL_BG);
+    }
     switch (currentScreen)
     {
     case SCR_MAIN_MENU:
     {
-        const char *items[] = {
-            "1. Start Test",
-            "2. Network / Sync",
-            "3. Stored Data",
-            "4. Hardware Tools",
-            "5. Device Status"};
-        u8g2.drawStr(0, 10, "[ MAIN MENU ]");
-        for (int i = 0; i < 5; i++)
+        if (needsFullRedraw)
         {
-            int y = 22 + (i * 10);
-            if (i == cursorIdx)
-                u8g2.drawStr(0, y, ">");
-            u8g2.drawStr(10, y, items[i]);
+            drawHeader("MAIN MENU");
+            const char *items[] = {
+                "1. Start Field Test",
+                "2. Network / Sync",
+                "3. Stored Data",
+                "4. Hardware Tools",
+                "5. Device Status"};
+            for (int i = 0; i < 5; i++)
+                drawMenuItem(i, items[i], i == cursorIdx);
+            drawFooter("UP/DN: Move   SEL: Open");
         }
         break;
     }
     case SCR_SITE_SETUP:
     {
-        u8g2.drawStr(0, 10, "[ SITE LOCATION ]");
-        u8g2.setCursor(0, 23);
-        u8g2.print("Site: ");
-        if (activeSiteAddress.length() == 0)
+        if (needsFullRedraw)
         {
-            u8g2.print("(Not Set)");
+            drawHeader("SITE LOCATION");
+            tft.fillRoundRect(10, 40, 300, 34, 5, COL_CARD);
+            tft.setTextColor(COL_MUTED, COL_CARD);
+            tft.setTextSize(1);
+            tft.setCursor(18, 46);
+            tft.print("ACTIVE SITE:");
+            tft.setTextColor(COL_ACCENT, COL_CARD);
+            tft.setTextSize(2);
+            tft.setCursor(18, 56);
+            tft.print(activeSiteAddress.length() > 0 ? activeSiteAddress : "(Not Set)");
+            String sdLabel = "Pick from SD (" + String(getPreloadedSiteCount()) + " sites)";
+            const char *opts[] = {"Use Current Site", sdLabel.c_str(), "Type New Address"};
+            for (int i = 0; i < 3; i++)
+            {
+                int y = 84 + (i * 36);
+                uint16_t bg = (i == cursorIdx) ? COL_ACCENT : COL_CARD;
+                uint16_t fg = (i == cursorIdx) ? COL_BG : COL_TEXT;
+                tft.fillRoundRect(10, y, 300, 30, 5, bg);
+                tft.setTextColor(fg, bg);
+                tft.setTextSize(2);
+                tft.setCursor(20, y + 7);
+                tft.print(i == cursorIdx ? "> " : "  ");
+                tft.print(opts[i]);
+            }
+            drawFooter("SEL: Choose   BACK: Return");
         }
-        else
+        break;
+    }
+    case SCR_SD_SITE_PICKER:
+    {
+        if (needsFullRedraw)
         {
-            String shortAddr = (activeSiteAddress.length() > 14)
-                                   ? activeSiteAddress.substring(0, 14)
-                                   : activeSiteAddress;
-            u8g2.print(shortAddr);
+            uint16_t total = getPreloadedSiteCount();
+            drawHeader("SD SITES (" + String(sdSiteIndex + 1) + "/" + String(total) + ")");
+            int startIdx = (sdSiteIndex / 5) * 5;
+            for (int i = 0; i < 5; i++)
+            {
+                int idx = startIdx + i;
+                if (idx >= (int)total)
+                    break;
+                drawMenuItem(i, getPreloadedSite((uint16_t)idx), idx == sdSiteIndex);
+            }
+            drawFooter("UP/DN: Scroll   SEL: Select Site");
         }
-        u8g2.drawStr(0, 38, cursorIdx == 0 ? ">" : " ");
-        u8g2.drawStr(10, 38, "Use Current Site");
-        u8g2.drawStr(0, 50, cursorIdx == 1 ? ">" : " ");
-        u8g2.drawStr(10, 50, "Edit / New Address");
         break;
     }
     case SCR_SELECT_MODE:
     {
-        const char *modes[] = {"Full Test", "Pressure Only", "Volume Only"};
-        u8g2.drawStr(0, 10, "[ SELECT TEST MODE ]");
-        for (int i = 0; i < 3; i++)
+        if (needsFullRedraw)
         {
-            int y = 26 + (i * 12);
-            if (i == cursorIdx)
-                u8g2.drawStr(0, y, ">");
-            u8g2.drawStr(10, y, modes[i]);
+            drawHeader("SELECT TEST MODE");
+            const char *modes[] = {"Full Test (Pres + Vol)", "Pressure Only (Closed)", "Volume Only (Open)"};
+            for (int i = 0; i < 3; i++)
+                drawMenuItem(i, modes[i], i == cursorIdx);
+            drawFooter("SEL: Confirm   BACK: Return");
         }
         break;
     }
     case SCR_SELECT_DURATION:
     {
-        u8g2.drawStr(0, 10, "[ SET TEST DURATION ]");
-        for (int i = 0; i < TOTAL_DURATION_PRESETS; i++)
+        if (needsFullRedraw)
         {
-            int y = 21 + (i * 9);
-            if (i == cursorIdx)
-                u8g2.drawStr(0, y, ">");
-            u8g2.setCursor(10, y);
-            if (durationPresetsMin[i] == 0)
+            drawHeader("TEST DURATION");
+            for (int i = 0; i < TOTAL_DURATION_PRESETS; i++)
             {
-                u8g2.print("Manual (No Limit)");
+                String lbl = (durationPresetsMin[i] == 0)
+                                 ? "Manual (No Time Limit)"
+                                 : String(durationPresetsMin[i]) + " Minutes" + (durationPresetsMin[i] == 15 ? " (Default)" : "");
+                drawMenuItem(i, lbl, i == cursorIdx);
             }
-            else
-            {
-                u8g2.print(durationPresetsMin[i]);
-                u8g2.print(" Minutes");
-                if (durationPresetsMin[i] == 15)
-                    u8g2.print(" (Def)");
-            }
+            drawFooter("SEL: START TEST   BACK: Return");
         }
         break;
     }
@@ -635,278 +772,339 @@ void renderMenu()
             finishAndSaveTest(targetDurationSec);
             return;
         }
-        u8g2.setCursor(0, 10);
-        if (targetDurationSec > 0)
+        if (needsFullRedraw)
         {
-            uint32_t rem = targetDurationSec - elapsedSec;
-            u8g2.print("[ LEFT: ");
-            u8g2.print(rem / 60);
-            u8g2.print("m ");
-            u8g2.print(rem % 60);
-            u8g2.print("s ]");
+            drawHeader("TEST RUNNING");
+            tft.fillRoundRect(10, 42, 145, 76, 6, COL_CARD);
+            tft.fillRoundRect(165, 42, 145, 76, 6, COL_CARD);
+            tft.fillRoundRect(10, 128, 145, 76, 6, COL_CARD);
+            tft.fillRoundRect(165, 128, 145, 76, 6, COL_CARD);
+            tft.setTextSize(1);
+            tft.setTextColor(COL_MUTED, COL_CARD);
+            tft.setCursor(20, 50);
+            tft.print("PRESSURE (BAR)");
+            tft.setCursor(175, 50);
+            tft.print("VOLUME (LITERS)");
+            tft.setCursor(20, 136);
+            tft.print("FLOW RATE (L/MIN)");
+            tft.setCursor(175, 136);
+            tft.print(targetDurationSec > 0 ? "TIME REMAINING" : "ELAPSED TIME");
+            drawFooter("SEL: STOP & SAVE    BACK: ABORT");
         }
-        else
-        {
-            u8g2.print("[ TIME: ");
-            u8g2.print(elapsedSec / 60);
-            u8g2.print("m ");
-            u8g2.print(elapsedSec % 60);
-            u8g2.print("s ]");
-        }
-        u8g2.setCursor(0, 24);
-        u8g2.print("Pres: ");
-        u8g2.print(livePres, 2);
-        u8g2.print(" Bar");
-        u8g2.setCursor(0, 36);
-        u8g2.print("Vol : ");
-        u8g2.print(getTotalVolumeLiters(), 2);
-        u8g2.print(" L");
-        u8g2.setCursor(0, 48);
-        u8g2.print("Flow: ");
-        u8g2.print(getLiveFlowRateLPM(), 1);
-        u8g2.print(" L/m");
-        u8g2.drawStr(0, 62, "SEL:Save  BACK:Abort");
+        tft.setTextSize(3);
+        tft.setTextColor(COL_ACCENT, COL_CARD);
+        tft.setCursor(20, 72);
+        tft.print(livePres, 2);
+        tft.print("  ");
+        tft.setTextColor(COL_GREEN, COL_CARD);
+        tft.setCursor(175, 72);
+        tft.print(getTotalVolumeLiters(), 2);
+        tft.print("  ");
+        tft.setTextColor(COL_TEXT, COL_CARD);
+        tft.setCursor(20, 158);
+        tft.print(getLiveFlowRateLPM(), 1);
+        tft.print("  ");
+        uint32_t dispSec = (targetDurationSec > 0) ? (targetDurationSec - elapsedSec) : elapsedSec;
+        char timeBuf[12];
+        snprintf(timeBuf, sizeof(timeBuf), "%02lu:%02lu", dispSec / 60, dispSec % 60);
+        tft.setTextColor(COL_AMBER, COL_CARD);
+        tft.setCursor(175, 158);
+        tft.print(timeBuf);
         break;
     }
     case SCR_NETWORK_MENU:
     {
-        const char *netItems[] = {
-            "Sync Pending Logs",
-            "Select Gateway",
-            "Setup Wi-Fi (Scan)",
-            "Connection Test"};
-        u8g2.setCursor(0, 10);
-        u8g2.print("[ NETWORK (");
-        u8g2.print(getPendingSyncCount());
-        u8g2.print(" Pend) ]");
-        for (int i = 0; i < 4; i++)
+        if (needsFullRedraw)
         {
-            int y = 23 + (i * 10);
-            if (i == cursorIdx)
-                u8g2.drawStr(0, y, ">");
-            u8g2.drawStr(10, y, netItems[i]);
+            drawHeader("NETWORK (" + String(getPendingSyncCount()) + " PEND)");
+            const char *netItems[] = {
+                "Sync Pending Logs",
+                "Select Gateway Mode",
+                "Setup Wi-Fi (Scan)",
+                "Connection Status"};
+            for (int i = 0; i < 4; i++)
+                drawMenuItem(i, netItems[i], i == cursorIdx);
+            drawFooter("SEL: Open   BACK: Main Menu");
         }
         break;
     }
     case SCR_GATEWAY_SELECT:
     {
-        u8g2.drawStr(0, 10, "[ SELECT GATEWAY ]");
-        u8g2.drawStr(0, 28, cursorIdx == 0 ? ">" : " ");
-        u8g2.drawStr(10, 28, "Wi-Fi Client");
-        u8g2.drawStr(0, 42, cursorIdx == 1 ? ">" : " ");
-        u8g2.drawStr(10, 42, "Bluetooth Client");
+        if (needsFullRedraw)
+        {
+            drawHeader("SELECT GATEWAY");
+            drawMenuItem(0, "Wi-Fi Client (Web UI)", cursorIdx == 0);
+            drawMenuItem(1, "Bluetooth Classic SPP", cursorIdx == 1);
+            drawFooter("Note: Only 1 radio active at a time");
+        }
         break;
     }
     case SCR_WIFI_SCAN_LIST:
     {
-        u8g2.setCursor(0, 10);
-        u8g2.print("[ WIFI FOUND: ");
-        u8g2.print(scannedNetCount);
-        u8g2.print(" ]");
-        int startIdx = (cursorIdx / 4) * 4;
-        for (int i = 0; i < 4; i++)
+        if (needsFullRedraw)
         {
-            int netIdx = startIdx + i;
-            if (netIdx >= scannedNetCount)
-                break;
-            int y = 23 + (i * 10);
-            if (netIdx == cursorIdx)
-                u8g2.drawStr(0, y, ">");
-            String ssid = getScannedSSID(netIdx);
-            if (ssid.length() > 14)
-                ssid = ssid.substring(0, 14);
-            u8g2.setCursor(10, y);
-            u8g2.print(ssid);
-            u8g2.print(" ");
-            u8g2.print(getScannedRSSI(netIdx));
+            drawHeader("WIFI FOUND: " + String(scannedNetCount));
+            int startIdx = (cursorIdx / 5) * 5;
+            for (int i = 0; i < 5; i++)
+            {
+                int netIdx = startIdx + i;
+                if (netIdx >= scannedNetCount)
+                    break;
+                String row = getScannedSSID(netIdx) + " (" + String(getScannedRSSI(netIdx)) + ")";
+                drawMenuItem(i, row, netIdx == cursorIdx);
+            }
+            drawFooter("SEL: Enter Password   BACK: Cancel");
         }
         break;
     }
     case SCR_VIRTUAL_KEYBOARD:
     {
-        u8g2.setCursor(0, 10);
-        if (kbPurpose == KB_FOR_WIFI_PASS)
+        if (needsFullRedraw)
         {
-            String shortSSID = (selectedWiFiSSID.length() > 15) ? selectedWiFiSSID.substring(0, 15) : selectedWiFiSSID;
-            u8g2.print("Pass: ");
-            u8g2.print(shortSSID);
+            drawHeader(kbPurpose == KB_FOR_WIFI_PASS ? "WIFI PASSWORD" : "ENTER SITE ADDRESS");
+            tft.drawRoundRect(10, 44, 300, 40, 5, COL_ACCENT);
+            tft.fillRect(14, 48, 292, 32, COL_CARD);
+            tft.setTextColor(COL_TEXT, COL_CARD);
+            tft.setTextSize(2);
+            tft.setCursor(20, 56);
+            tft.print(kbInputBuffer);
+            tft.print("_");
+            int prevIdx = (keyCharIndex <= 0) ? KB_CHAR_LEN : keyCharIndex - 1;
+            int nextIdx = (keyCharIndex >= KB_CHAR_LEN) ? 0 : keyCharIndex + 1;
+            auto fmtKey = [](int idx) -> String
+            {
+                if (idx == KB_CHAR_LEN)
+                    return "[OK]";
+                if (kbChars[idx] == ' ')
+                    return "[SP]";
+                return String(kbChars[idx]);
+            };
+            tft.setTextSize(2);
+            tft.setTextColor(COL_MUTED, COL_BG);
+            tft.setCursor(55, 118);
+            tft.print(fmtKey(prevIdx));
+            tft.fillRoundRect(120, 105, 80, 42, 6, COL_ACCENT);
+            tft.setTextColor(COL_BG, COL_ACCENT);
+            tft.setCursor(138, 118);
+            tft.print(fmtKey(keyCharIndex));
+            tft.setTextColor(COL_MUTED, COL_BG);
+            tft.setCursor(235, 118);
+            tft.print(fmtKey(nextIdx));
+            drawFooter("UP/DN: Char  SEL: Add/OK  BACK: Del");
         }
-        else
-        {
-            u8g2.print("[ ENTER SITE ADDRESS ]");
-        }
-        u8g2.drawFrame(0, 14, 128, 15);
-        String visibleText = (kbInputBuffer.length() > 17)
-                                 ? kbInputBuffer.substring(kbInputBuffer.length() - 17)
-                                 : kbInputBuffer;
-        u8g2.setCursor(4, 25);
-        u8g2.print(visibleText);
-        u8g2.print("_");
-        u8g2.drawStr(0, 44, "Pick:");
-        int prevIdx = (keyCharIndex <= 0) ? KB_CHAR_LEN : keyCharIndex - 1;
-        int nextIdx = (keyCharIndex >= KB_CHAR_LEN) ? 0 : keyCharIndex + 1;
-        auto formatKey = [](int idx) -> String
-        {
-            if (idx == KB_CHAR_LEN)
-                return "[OK]";
-            if (kbChars[idx] == ' ')
-                return "[SP]";
-            return String(kbChars[idx]);
-        };
-        u8g2.setCursor(36, 44);
-        u8g2.print(formatKey(prevIdx));
-        u8g2.drawBox(64, 33, 30, 14);
-        u8g2.setDrawColor(0);
-        u8g2.setCursor(68, 44);
-        u8g2.print(formatKey(keyCharIndex));
-        u8g2.setDrawColor(1);
-        u8g2.setCursor(100, 44);
-        u8g2.print(formatKey(nextIdx));
-        u8g2.drawStr(0, 61, "SEL:Add  BACK:Del");
         break;
     }
-    case SCR_CONN_TEST: {
-        u8g2.drawStr(0, 10, "[ CONNECTION TEST ]");
-        u8g2.setCursor(0, 26);
-        u8g2.print("Mode: ");
-        u8g2.print(getActiveGatewayMode() == MODE_WIFI ? "Wi-Fi" : "Bluetooth");
-        u8g2.setCursor(0, 38);
-        u8g2.print(getNetworkStatusText());
-
-        // Show the ESP32's assigned IP address when Wi-Fi is connected
-        if (getActiveGatewayMode() == MODE_WIFI && isNetworkConnected()) {
-            u8g2.setCursor(0, 50);
-            u8g2.print("IP: "); u8g2.print(WiFi.localIP());
+    case SCR_CONN_TEST:
+    {
+        if (needsFullRedraw)
+        {
+            drawHeader("CONNECTION STATUS");
+            drawFooter("Press BACK to return");
         }
-
-        u8g2.drawStr(0, 62, "Press BACK to return");
+        tft.fillRoundRect(10, 45, 300, 150, 6, COL_CARD);
+        tft.setTextColor(COL_TEXT, COL_CARD);
+        tft.setTextSize(2);
+        tft.setCursor(22, 60);
+        tft.print("Mode: ");
+        tft.print(getActiveGatewayMode() == MODE_WIFI ? "Wi-Fi" : "Bluetooth");
+        tft.setTextColor(isNetworkConnected() ? COL_GREEN : COL_AMBER, COL_CARD);
+        tft.setCursor(22, 95);
+        tft.print(getNetworkStatusText());
+        if (getActiveGatewayMode() == MODE_WIFI && isNetworkConnected())
+        {
+            tft.setTextColor(COL_ACCENT, COL_CARD);
+            tft.setCursor(22, 130);
+            tft.print("IP: ");
+            tft.print(WiFi.localIP());
+            tft.setTextSize(1);
+            tft.setTextColor(COL_MUTED, COL_CARD);
+            tft.setCursor(22, 162);
+            tft.print("Open http://water-rig.local on phone");
+        }
         break;
     }
     case SCR_STORAGE_MENU:
     {
-        u8g2.setCursor(0, 10);
-        u8g2.print("[ DATA: ");
-        u8g2.print(getStoredLogCount());
-        u8g2.print("/");
-        u8g2.print(MAX_STORED_LOGS);
-        u8g2.print(" ]");
-        u8g2.drawStr(0, 28, cursorIdx == 0 ? ">" : " ");
-        u8g2.drawStr(10, 28, "View Saved Logs");
-        u8g2.drawStr(0, 42, cursorIdx == 1 ? ">" : " ");
-        u8g2.drawStr(10, 42, "Clear All Memory");
+        if (needsFullRedraw)
+        {
+            drawHeader("DATA (" + String(getStoredLogCount()) + "/" + String(MAX_STORED_LOGS) + ")");
+            drawMenuItem(0, "View FRAM Logs", cursorIdx == 0);
+            drawMenuItem(1, "Clear FRAM Memory", cursorIdx == 1);
+            drawFooter(isSDCardReady() ? "microSD Backup: ACTIVE" : "microSD Backup: NO CARD");
+        }
         break;
     }
     case SCR_VIEW_LOGS:
     {
-        TestLog log;
-        if (readTestLogByIndex((uint16_t)logViewIndex, log))
+        if (needsFullRedraw)
         {
-            u8g2.setCursor(0, 10);
-            u8g2.print("#");
-            u8g2.print(log.logId);
-            u8g2.print("[");
-            u8g2.print(log.syncStatus);
-            u8g2.print("] ");
-            String shortSite = String(log.siteAddress);
-            if (shortSite.length() > 11)
-                shortSite = shortSite.substring(0, 11);
-            u8g2.print(shortSite);
-            u8g2.setCursor(0, 24);
-            u8g2.print("Vol : ");
-            u8g2.print(log.totalVolumeLiters, 2);
-            u8g2.print(" L");
-            u8g2.setCursor(0, 36);
-            u8g2.print("Peak: ");
-            u8g2.print(log.peakPressureBar, 2);
-            u8g2.print(" Bar");
-            u8g2.setCursor(0, 48);
-            u8g2.print("Time: ");
-            u8g2.print(log.durationSec);
-            u8g2.print(" sec");
-            u8g2.drawStr(0, 62, "UP/DN:Nav SEL:Del");
+            TestLog log;
+            if (readTestLogByIndex((uint16_t)logViewIndex, log))
+            {
+                drawHeader("LOG #" + String(log.logId) + " [" + String(log.syncStatus) + "]");
+                tft.fillRoundRect(10, 44, 300, 155, 6, COL_CARD);
+                tft.setTextColor(COL_ACCENT, COL_CARD);
+                tft.setTextSize(2);
+                tft.setCursor(20, 56);
+                tft.print(log.siteAddress);
+                tft.setTextColor(COL_TEXT, COL_CARD);
+                tft.setCursor(20, 92);
+                tft.print("Volume : ");
+                tft.print(log.totalVolumeLiters, 2);
+                tft.print(" L");
+                tft.setCursor(20, 124);
+                tft.print("Peak P : ");
+                tft.print(log.peakPressureBar, 2);
+                tft.print(" Bar");
+                tft.setCursor(20, 156);
+                tft.print("Time   : ");
+                tft.print(log.durationSec);
+                tft.print(" sec");
+            }
+            drawFooter("UP/DN: Next/Prev   SEL: Delete");
         }
         break;
     }
     case SCR_CLEAR_CONFIRM:
     {
-        u8g2.drawStr(0, 12, "Erase ALL stored logs?");
-        u8g2.drawStr(0, 30, cursorIdx == 0 ? "> YES, Erase All" : "  YES, Erase All");
-        u8g2.drawStr(0, 44, cursorIdx == 1 ? "> NO, Cancel" : "  NO, Cancel");
+        if (needsFullRedraw)
+        {
+            drawHeader("CONFIRM ERASE");
+            tft.setTextColor(COL_RED, COL_BG);
+            tft.setTextSize(2);
+            tft.setCursor(20, 50);
+            tft.print("Erase ALL FRAM logs?");
+            drawMenuItem(1, "YES, Erase All Logs", cursorIdx == 0);
+            drawMenuItem(2, "NO, Cancel", cursorIdx == 1);
+        }
         break;
     }
     case SCR_TOOLS_MENU:
     {
-        u8g2.drawStr(0, 10, "[ HARDWARE TOOLS ]");
-        u8g2.drawStr(0, 22, cursorIdx == 0 ? ">" : " ");
-        u8g2.setCursor(10, 22);
-        u8g2.print(getSolenoidState() ? "Valve: OPEN (Toggle)" : "Valve: CLOSED (Toggle)");
-        u8g2.drawStr(0, 32, cursorIdx == 1 ? ">" : " ");
-        u8g2.drawStr(10, 32, "Zero Pressure Sensor");
-        u8g2.drawStr(0, 42, cursorIdx == 2 ? ">" : " ");
-        u8g2.drawStr(10, 42, "Test Buzzer / OLED");
-        u8g2.drawStr(0, 52, cursorIdx == 3 ? ">" : " ");
-        u8g2.drawStr(10, 52, "Flow Calibration");
+        if (needsFullRedraw)
+        {
+            drawHeader("HARDWARE TOOLS");
+            const char *tools[] = {
+                getSolenoidState() ? "Valve: OPEN (Toggle)" : "Valve: CLOSED (Toggle)",
+                "Zero Pressure Sensor",
+                "Test Buzzer & TFT",
+                "Flow K-Factor Calib",
+                "Max Pressure Rating"};
+            for (int i = 0; i < 5; i++)
+                drawMenuItem(i, tools[i], i == cursorIdx);
+            drawFooter("SEL: Execute   BACK: Main Menu");
+        }
         break;
     }
     case SCR_CALIBRATE_FLOW:
     {
-        u8g2.drawStr(0, 10, "[ FLOW K-FACTOR ]");
-        u8g2.setCursor(10, 32);
-        u8g2.print("K = ");
-        u8g2.print(getFlowKFactor(), 2);
-        u8g2.drawStr(0, 50, "UP/DN:Adj  SEL:Save");
+        if (needsFullRedraw)
+        {
+            drawHeader("FLOW K-FACTOR");
+            tft.fillRoundRect(20, 60, 280, 95, 8, COL_CARD);
+            tft.setTextColor(COL_MUTED, COL_CARD);
+            tft.setTextSize(2);
+            tft.setCursor(45, 75);
+            tft.print("YF-B1 K-Factor:");
+            tft.setTextColor(COL_ACCENT, COL_CARD);
+            tft.setTextSize(3);
+            tft.setCursor(85, 112);
+            tft.print(getFlowKFactor(), 2);
+            drawFooter("UP/DN: +/- 0.1   SEL: Save to FRAM");
+        }
         break;
     }
-    case SCR_OLED_TEST:
+    case SCR_CALIBRATE_MAX_PRES:
     {
-        u8g2.drawBox(0, 0, 128, 64);
+        if (needsFullRedraw)
+        {
+            drawHeader("MAX PRESSURE RATING");
+            tft.fillRoundRect(20, 60, 280, 95, 8, COL_CARD);
+            tft.setTextColor(COL_MUTED, COL_CARD);
+            tft.setTextSize(2);
+            tft.setCursor(45, 75);
+            tft.print("Sensor Full Scale:");
+            tft.setTextColor(COL_ACCENT, COL_CARD);
+            tft.setTextSize(3);
+            tft.setCursor(70, 112);
+            tft.print(getMaxPressureBar(), 1);
+            tft.print(" Bar");
+            drawFooter("UP/DN: +/- 0.5 Bar   SEL: Save");
+        }
+        break;
+    }
+    case SCR_TFT_TEST:
+    {
+        if (needsFullRedraw)
+        {
+            tft.fillScreen(ILI9341_WHITE);
+            tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+            tft.setTextSize(2);
+            tft.setCursor(45, 110);
+            tft.print("TFT & BUZZER OK");
+        }
         break;
     }
     case SCR_DEVICE_STATUS:
     {
+        if (needsFullRedraw)
+        {
+            drawHeader("DEVICE STATUS");
+            drawFooter("SEL: SHUT DOWN (DEEP SLEEP)");
+        }
         float v = getBatteryVoltage();
-        int pct = getBatteryPercentage(v);
-        u8g2.drawStr(0, 10, "[ DEVICE STATUS ]");
-        u8g2.setCursor(0, 26);
-        u8g2.print("Bat: ");
-        u8g2.print(v, 1);
-        u8g2.print("V (");
-        u8g2.print(pct);
-        u8g2.print("%)");
-        u8g2.setCursor(0, 38);
-        u8g2.print("FW : ");
-        u8g2.print(FIRMWARE_VERSION);
-        u8g2.drawStr(0, 58, "SEL: Shut Down (Sleep)");
+        tft.fillRoundRect(10, 45, 300, 155, 6, COL_CARD);
+        tft.setTextColor(COL_TEXT, COL_CARD);
+        tft.setTextSize(2);
+        tft.setCursor(22, 60);
+        tft.print("Battery : ");
+        tft.print(v, 2);
+        tft.print("V (");
+        tft.print(getBatteryPercentage(v));
+        tft.print("%)");
+        tft.setCursor(22, 92);
+        tft.print("microSD : ");
+        tft.print(isSDCardReady() ? "Mounted" : "Not Found");
+        tft.setCursor(22, 124);
+        tft.print("Max Pres: ");
+        tft.print(getMaxPressureBar(), 1);
+        tft.print(" Bar");
+        tft.setCursor(22, 156);
+        tft.print("Firmware: ");
+        tft.print(FIRMWARE_VERSION);
         break;
     }
     }
-    if (millis() < toastExpireTime && toastMsg.length() > 0)
+    if (toastActive)
     {
-        u8g2.setDrawColor(1);
-        u8g2.drawBox(0, 51, 128, 13);
-        u8g2.setDrawColor(0);
-        u8g2.drawStr(4, 61, toastMsg.c_str());
-        u8g2.setDrawColor(1);
+        tft.fillRoundRect(20, 182, 280, 30, 6, COL_AMBER);
+        tft.setTextColor(COL_BG, COL_AMBER);
+        tft.setTextSize(2);
+        tft.setCursor(32, 189);
+        tft.print(toastMsg);
     }
-    u8g2.sendBuffer();
+    needsFullRedraw = false;
 }
-
 // =========================================================================
 // WEB PORTAL REMOTE SYNCHRONIZATION HOOKS
 // =========================================================================
-void remoteSetSiteAddress(const String& site) {
-    if (site.length() > 0) {
+void remoteSetSiteAddress(const String &site)
+{
+    if (site.length() > 0)
+    {
         activeSiteAddress = site.substring(0, 23);
         showToast("Site Updated via Web");
+        needsFullRedraw = true;
     }
 }
-
-String remoteGetSiteAddress() {
+String remoteGetSiteAddress()
+{
     return activeSiteAddress;
 }
-
-bool remoteStartTest(uint8_t mode, uint16_t durationMinutes) {
-    if (currentScreen == SCR_TEST_RUNNING) return false;
+bool remoteStartTest(uint8_t mode, uint16_t durationMinutes)
+{
+    if (currentScreen == SCR_TEST_RUNNING)
+        return false;
     activeTestMode = (mode > 2) ? 0 : mode;
     targetDurationSec = (uint32_t)durationMinutes * 60UL;
     resetFlowCounters();
@@ -917,30 +1115,34 @@ bool remoteStartTest(uint8_t mode, uint16_t durationMinutes) {
     changeScreen(SCR_TEST_RUNNING);
     return true;
 }
-
-void remoteStopAndSaveTest() {
-    if (currentScreen == SCR_TEST_RUNNING) {
+void remoteStopAndSaveTest()
+{
+    if (currentScreen == SCR_TEST_RUNNING)
+    {
         uint32_t elapsedSec = (millis() - testStartTime) / 1000UL;
         finishAndSaveTest(elapsedSec);
     }
 }
-
-void remoteAbortTest() {
-    if (currentScreen == SCR_TEST_RUNNING) {
+void remoteAbortTest()
+{
+    if (currentScreen == SCR_TEST_RUNNING)
+    {
         setSolenoidState(false);
         showToast("Test Aborted via Web");
         changeScreen(SCR_MAIN_MENU, 0);
     }
 }
-
-bool remoteIsTestRunning() {
+bool remoteIsTestRunning()
+{
     return (currentScreen == SCR_TEST_RUNNING);
 }
-
-uint32_t remoteGetRemainingOrElapsedSec() {
-    if (currentScreen != SCR_TEST_RUNNING) return 0;
+uint32_t remoteGetRemainingOrElapsedSec()
+{
+    if (currentScreen != SCR_TEST_RUNNING)
+        return 0;
     uint32_t elapsed = (millis() - testStartTime) / 1000UL;
-    if (targetDurationSec > 0) {
+    if (targetDurationSec > 0)
+    {
         return (elapsed >= targetDurationSec) ? 0 : (targetDurationSec - elapsed);
     }
     return elapsed;

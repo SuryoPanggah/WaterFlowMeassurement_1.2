@@ -1,0 +1,62 @@
+  [ STAGE 1: 220V AC INPUT & PROTECTION ]             [ STAGE 2: 12V ORING, CHARGER & MAIN BUS ]
+
+  AC Live ───[ Fuse 2.5A ]───┬───────────┬─────────► [ AC/L ]                  Blocking
+                             │           │           [      ]  IRM-20-12        SR540
+                        [Varistor]   [X2 Cap]        [      ]  +V ───┬───┬────────►|────────┬──────► +12V BUS
+                        [14D-471K]   [0.22uF]        [      ]        │   │                  │        (Main Rail)
+                             │           │           [      ]        │ [2.2k]               │
+  AC Neut ───[ NTC 10D-9 ]───┴───────────┴─────────► [ AC/N ]  -V ┐  │   │                  │
+                                                                  ▼  │  [▼] AC LED          │
+                                                                 GND │   │                  │
+                                                                     │  GND                 │
+                     ┌───────────────────────────────────────────────┘                      │
+                     ▼                                                                      │
+                (S) Source [ IRF9540N P-Ch MOSFET ] Drain (D) ───► [ A436 IN+ ]             │
+                     │              (G) Gate                       [  CC/CV   ]             │
+                  [10k]              │                             [ 14.85V/1A]             │
+                     ├──► (E) S8550 (C) ───┬─── [10k] ───► GND     [IN-] [OUT+] ──►|──┐     │
+                     │       (B)           │                        │        1N5822   │     │
+                     └──[10k]─┴─► (C) 2N2222A ◄── [1k] ◄── GPIO 14  GND      (Stripe) │     │
+                                  (E) ──► GND                                         ▼     │
+  4S LiFePO4 Pack ───(+)───┬──────────────────────────────────────────────────────────┴►|───┘
+  (12.8V / 14.6V Max)      │                                                     ORing SR540
+       │                   │
+      (-)                 [R1: 47k]
+       │                   │
+       ▼                   ├───────┬────────► To ESP32 GPIO 35 (Bat Sense)
+      GND                  │       │
+                      [R2: 10k]  [0.1uF]
+                           │       │
+                           ▼       ▼
+                          GND     GND
+
+====================================================================================================
+
+  [ STAGE 3: REGULATED 5V LOGIC RAIL ]
+
+  +12V BUS ───┬───────┬─────────► [ IN+ ]   MP1584    [ OUT+ ] ───┬───────┬──────► +5V OUTPUT
+              │       │           [     ]  (5V Fixed) [      ]    │       │        (To ESP32 VIN
+          [47uF]   [0.1uF]        [     ]             [      ]  [47uF]  [0.1uF]     & 5V Sensors)
+          [50V +]  [ Cer ]        [ IN- ]             [ OUT- ]  [50V +] [ Cer ]
+              │       │              │                   │        │       │
+              ▼       ▼              ▼                   ▼        ▼       ▼
+             GND     GND            GND                 GND      GND     GND
+
+====================================================================================================
+
+  [ STAGE 4: DISCRETE SONGLE RELAY & 12V SOLENOID DRIVER ]
+
+                                        +12V BUS ───────┬─────────┬──────────────┐
+                                                        │         │              │
+                                                     [1N4148]   (Coil)         [COM]
+                                                     (Stripe)   12V Relay        │  (Internal
+                                                        ▲       (Riviera)        /   Switch)
+                                                        │         │              │
+  From ESP32 ───[ 1k Ohm ]───► (B) NPN Transistor ──────┴─────────┘            [NO]
+  GPIO 19                       2N2222A                                          │
+  (3.3V)                            (E)                                          ├──────► Solenoid (+)
+                                     │                                           ▲
+                                     ▼                                       [1N5822]
+                                    GND                                      (Stripe)
+                                                                                 │
+                                                                                GND ◄──── Solenoid (-)
