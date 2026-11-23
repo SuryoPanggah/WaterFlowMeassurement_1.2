@@ -29,6 +29,9 @@ void initSensorManager() {
     pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowPulseISR, RISING);
 
+    pinMode(CHARGER_HOLD_PIN, OUTPUT);
+    digitalWrite(CHARGER_HOLD_PIN, LOW); // LOW = Charger ON by default
+
     lastFlowCalcTime = millis();
     Serial.println("[Sensors] Hardware initialized. Solenoid CLOSED.");
 }
@@ -130,6 +133,16 @@ float getMaxPressureBar() {
 }
 
 void setSolenoidState(bool openValve) {
+    if (openValve) {
+        digitalWrite(CHARGER_HOLD_PIN, HIGH); // Pause A436 charger
+        delay(20);
+        digitalWrite(SOLENOID_RELAY_PIN, HIGH);     // Open 12V solenoid
+    } else {
+        digitalWrite(SOLENOID_RELAY_PIN, LOW);      // Close 12V solenoid
+        delay(20);
+        digitalWrite(CHARGER_HOLD_PIN, LOW);  // Resume A436 charger
+    }
+
     solenoidIsOpen = openValve;
     digitalWrite(SOLENOID_RELAY_PIN, openValve ? HIGH : LOW);
     Serial.print("[Sensors] Solenoid Valve: ");

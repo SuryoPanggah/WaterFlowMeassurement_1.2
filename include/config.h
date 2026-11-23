@@ -53,6 +53,7 @@
 // 6. POWER & BATTERY MONITORING (ADC1)
 // =========================================================================
 #define BATTERY_ADC_PIN             35      // ADC1_CH7 (Input only, Wi-Fi safe)
+#define CHARGER_HOLD_PIN        14  // GPIO 14: HIGH = Pause A436 battery charger during solenoid test
 #define VOLTAGE_DIVIDER_RATIO       5.7f    // (R1: 47k + R2: 10k) / R2: 10k
 #define BATTERY_MIN_VOLTS           11.5f   // 0% threshold for 4S LiFePO4
 #define BATTERY_MAX_VOLTS           13.6f   // 100% resting threshold for 4S LiFePO4
