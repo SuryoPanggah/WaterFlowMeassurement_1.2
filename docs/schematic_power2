@@ -1,0 +1,69 @@
+  [ STAGE 1: 220V AC INPUT & PROTECTION ]             [ STAGE 2: 12V ORING, CHARGER & MAIN BUS ]
+
+  AC Live ───[ Fuse 2.5A ]───┬───────────┬─────────► [ AC/L ]                  Blocking
+                             │           │           [      ]  IRM-20-12        SR540
+                        [Varistor]   [X2 Cap]        [      ]  +V ───┬───┬────────►|────────┬──────► +12V BUS
+                        [14D-471K]   [0.22uF]        [      ]        │   │                  │        (Main Rail)
+                             │           │           [      ]        │ [2.2k]               │
+  AC Neut ───[ NTC 10D-9 ]───┴───────────┴─────────► [ AC/N ]  -V ┐  │   │                  │
+                                                                  ▼  │  [▼] AC LED          │
+                                                                 GND │   │                  │
+                                                                     │  GND                 │
+                     ┌───────────────────────────────────────────────┤                      │
+                     │                                               ▼                      │
+                     │  [ OPTIONAL FUTURE: AC SENSE ]           (S) Source [ IRF9540N ] Drain (D) ─► [ A436 IN+ ]
+                     │  IRM +V ──[47k]──┬──► GPIO 36 (VP)            │       P-MOSFET                [  CC/CV   ]
+                     │                  ├──[10k]──► GND           [10k #1]      (G) Gate             [ 14.85V/1A]
+                     │                  └──[0.1uF]─► GND             │           │                   [IN-] [OUT+]─►|─┐
+                     │                                               ├──► (E) S8550 (C) ─┬─[10k #3]─► GND   1N5822  │
+                     ▼                                               │       (B)         │                  (Stripe)│
+  4S LiFePO4 Pack ───(+)───┬─────────────────────────────────────────┼───────┼───────────┼──────────────────────────┘
+  (12.8V / 14.6V Max)      │                                         │    [10k #2]       │
+       │                   │                                         │       │           │
+      (-)                 [R1: 47k]                                  └──► (C) 2N2222A ◄──┴── [1k] ◄── ESP32 GPIO 2
+       │                   │                                                  (E) ──► GND             (CHARGER_HOLD)
+       ▼                   ├───────┬────────► To ESP32 GPIO 35
+      GND                  │       │          (BATTERY_ADC_PIN)
+                      [R2: 10k]  [0.1uF]
+                           │       │
+                           ▼       ▼
+                          GND     GND
+                                                      ┌─────────────────────────────────────────────────────────────┐
+  4S LiFePO4 (+) ─────────────────────────────────────┴►|───► +12V BUS (Joins above at Main Rail)                   │
+                                                   ORing SR540                                                      │
+                                                                                                                    │
+  [ OPTIONAL FUTURE: +12V BUS SENSE ]                                                                               │
+  +12V BUS ───[ 47k ]───┬───► To ESP32 GPIO 33 (BUS_12V_ADC_PIN)                                                    │
+                        ├───[ 10k ]───► GND                                                                         │
+                        └───[ 0.1uF ]─► GND                                                                         │
+
+========================================================================================================================
+
+  [ STAGE 3: REGULATED 5V LOGIC RAIL ]
+
+  +12V BUS ───┬───────┬─────────► [ IN+ ]   MP1584    [ OUT+ ] ───┬───────┬──────► +5V OUTPUT (To ESP32 VIN & Sensors)
+              │       │           [     ]  (5V Fixed) [      ]    │       │
+          [47uF]   [0.1uF]        [     ]             [      ]  [47uF]  [0.1uF]   [ OPTIONAL FUTURE: +5V RAIL SENSE ]
+          [50V +]  [ Cer ]        [ IN- ]             [ OUT- ]  [50V +] [ Cer ]   +5V OUT ──[ 10k ]──┬──► GPIO 39 (VN)
+              │       │              │                   │        │       │                          ├──[ 10k ]──► GND
+              ▼       ▼              ▼                   ▼        ▼       ▼                          └──[ 0.1uF ]► GND
+             GND     GND            GND                 GND      GND     GND
+
+========================================================================================================================
+
+  [ STAGE 4: DISCRETE SONGLE RELAY & 12V SOLENOID DRIVER ]
+
+                                        +12V BUS ───────┬─────────┬──────────────┐
+                                                        │         │              │
+                                                     [1N4148]   (Coil)         [COM]
+                                                     (Stripe)   12V Relay        │  (Internal
+                                                        ▲       (Riviera)        /   Switch)
+                                                        │         │              │
+  From ESP32 ───[ 1k Ohm ]───► (B) NPN Transistor ──────┴─────────┘            [NO]
+  GPIO 32                       2N2222A                                          │
+  (SOLENOID_RELAY_PIN)              (E)                                          ├──────► Solenoid (+)
+                                     │                                           ▲
+                                     ▼                                       [1N5822]
+                                    GND                                      (Stripe)
+                                                                                 │
+                                                                                GND ◄──── Solenoid (-)
