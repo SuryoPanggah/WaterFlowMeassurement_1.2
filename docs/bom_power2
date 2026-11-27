@@ -1,14 +1,14 @@
-STAGE		      COMPONENT		                QTY		PIN / LEAD		            SOURCE (FROM)		                DESTINATION (TO)		                  NOTES / POLARITY
-1. AC In		  Fuse (2.5A 250V)		        1		  Pin 1 / Pin 2		          AC Live Inlet		                Varistor + X2 Cap + IRM AC/L		      Must be first on Live wire
-1. AC In		  Varistor (14D-471K)		      1		  Lead 1 / Lead 2		        Filtered Live (after fuse)		  Filtered Neutral (after NTC)		      Non-polarized surge clamp
-1. AC In		  NTC (10D-9)		              1		  Lead 1 / Lead 2		        AC Neutral Inlet		            Varistor + X2 Cap + IRM AC/N		      Non-polarized inrush limiter
-1. AC In		  X2 Cap (0.22uF 275VAC)		  1		  Lead 1 / Lead 2		        Filtered Live		                Filtered Neutral		                  Non-polarized EMI filter
-1. AC-DC		  Mean Well IRM-20-12		      1		  AC/L & AC/N		            Filtered Live & Neutral		      (Internal AC-DC Module)		            Keep 4mm+ gap from DC pads
-1. AC-DC		  Mean Well IRM-20-12		      -		  +Vo / -Vo		              +Vo -> SR540 + LED + IRF9540N		-Vo -> Common GND		                  Raw 12.0V AC-only rail
-2. ORing		  Blocking SR540		          1		  Anode / Cathode		        IRM-20-12 +Vo		                +12V Main Bus		                      Silver stripe faces +12V Bus
-2. ORing		  ORing SR540		              1		  Anode / Cathode		        4S LiFePO4 Bat (+)		          +12V Main Bus		                      Silver stripe faces +12V Bus
-2. AC LED		  Resistor (2.2k Ohm)		      1		  Lead 1 / Lead 2		        IRM-20-12 +Vo (before diode)		AC Indicator LED Anode (+)		        Or use two 1k resistors in series
-2. AC LED		  Indicator LED (3mm/5mm)		  1		  Anode (+) / Cathode (-)		2.2k Resistor		                Common GND		                        Lights only when AC is plugged in
+STAGE		    COMPONENT		                QTY		PIN / LEAD		            SOURCE (FROM)		                DESTINATION (TO)		                  NOTES / POLARITY
+1. AC In		Fuse (2.5A 250V)		        1		  Pin 1 / Pin 2		          AC Live Inlet		                Varistor + X2 Cap + IRM AC/L		      Must be first on Live wire
+1. AC In		Varistor (14D-471K)		      1		  Lead 1 / Lead 2		        Filtered Live (after fuse)		  Filtered Neutral (after NTC)		      Non-polarized surge clamp
+1. AC In		NTC (10D-9)		              1		  Lead 1 / Lead 2		        AC Neutral Inlet		            Varistor + X2 Cap + IRM AC/N		      Non-polarized inrush limiter
+1. AC In		X2 Cap (0.22uF 275VAC)		  1		  Lead 1 / Lead 2		        Filtered Live		                Filtered Neutral		                  Non-polarized EMI filter
+1. AC-DC		Mean Well IRM-20-12		      1		  AC/L & AC/N		            Filtered Live & Neutral		      (Internal AC-DC Module)		            Keep 4mm+ gap from DC pads
+1. AC-DC		Mean Well IRM-20-12		      -		  +Vo / -Vo		              +Vo -> SR540 + LED + IRF9540N		-Vo -> Common GND		                  Raw 12.0V AC-only rail
+2. ORing		Blocking SR540		          1		  Anode / Cathode		        IRM-20-12 +Vo		                +12V Main Bus		                      Silver stripe faces +12V Bus
+2. ORing		ORing SR540		              1		  Anode / Cathode		        4S LiFePO4 Bat (+)		          +12V Main Bus		                      Silver stripe faces +12V Bus
+2. AC LED		Resistor (2.2k Ohm)		      1		  Lead 1 / Lead 2		        IRM-20-12 +Vo (before diode)		AC Indicator LED Anode (+)		        Or use two 1k resistors in series
+2. AC LED		Indicator LED (3mm/5mm)		  1		  Anode (+) / Cathode (-)		2.2k Resistor		                Common GND		                        Lights only when AC is plugged in
 2. Chg Hold		Resistor (1k Ohm)		        1		  Lead 1 / Lead 2		        ESP32 GPIO 2 (CHARGER_HOLD)		  2N2222A Base (Middle pin)		          Charger pause trigger input
 2. Chg Hold		NPN (2N2222A)		            1		  E / B / C		              E -> GND | B -> 1k Res		      C -> 10k #2 to S8550 Base		          TO-92 Left-to-Right: E-B-C
 2. Chg Hold		Resistor 10k #1 (Pullup)		1		  Lead 1 / Lead 2		        IRM-20-12 +Vo		                S8550 Base (Middle pin)		            Keeps S8550 OFF when GPIO 2 is LOW
