@@ -1,33 +1,33 @@
-STAGE		    COMPONENT		                QTY		PIN / LEAD		            SOURCE (FROM)		                DESTINATION (TO)		                  NOTES / POLARITY
-1. AC In		Fuse (2.5A 250V)		        1		  Pin 1 / Pin 2		          AC Live Inlet		                Varistor + X2 Cap + IRM AC/L		      Must be first on Live wire
-1. AC In		Varistor (14D-471K)		        1		  Lead 1 / Lead 2		        Filtered Live (after fuse)		  Filtered Neutral (after NTC)		      Non-polarized surge clamp
-1. AC In		NTC (10D-9)		                1		  Lead 1 / Lead 2		        AC Neutral Inlet		            Varistor + X2 Cap + IRM AC/N		      Non-polarized inrush limiter
-1. AC In		X2 Cap (0.22uF 275VAC)		    1		  Lead 1 / Lead 2		        Filtered Live		                Filtered Neutral		                  Non-polarized EMI filter
-1. AC-DC		Mean Well IRM-20-12		        1		  AC/L & AC/N		            Filtered Live & Neutral		      (Internal AC-DC Module)		            Keep 4mm+ gap from DC pads
-1. AC-DC		Mean Well IRM-20-12		        -		  +Vo / -Vo		              +Vo -> SR540 + LED + IRF9540N		-Vo -> Common GND		                  Raw 12.0V AC-only rail
-2. ORing		Blocking SR540		            1		  Anode / Cathode		        IRM-20-12 +Vo		                +12V Main Bus		                      Silver stripe faces +12V Bus
-2. ORing		ORing SR540		                1		  Anode / Cathode		        4S LiFePO4 Bat (+)		          +12V Main Bus		                      Silver stripe faces +12V Bus
-2. AC LED		Resistor (2.2k Ohm)		        1		  Lead 1 / Lead 2		        IRM-20-12 +Vo (before diode)		AC Indicator LED Anode (+)		        Or use two 1k resistors in series
-2. AC LED		Indicator LED (3mm/5mm)		    1		  Anode (+) / Cathode (-)		2.2k Resistor		                Common GND		                        Lights only when AC is plugged in
-2. Chg Hold		Resistor (1k Ohm)		        1		  Lead 1 / Lead 2		        ESP32 GPIO 2 (CHARGER_HOLD)		  2N2222A Base (Middle pin)		          Charger pause trigger input
-2. Chg Hold		NPN (2N2222A)		            1		  E / B / C		              E -> GND | B -> 1k Res		      C -> 10k #2 to S8550 Base		          TO-92 Left-to-Right: E-B-C
-2. Chg Hold		Resistor 10k #1 (Pullup)		1		  Lead 1 / Lead 2		        IRM-20-12 +Vo		                S8550 Base (Middle pin)		            Keeps S8550 OFF when GPIO 2 is LOW
-2. Chg Hold		Resistor 10k #2 (Limiter)		1		  Lead 1 / Lead 2		        S8550 Base (Middle pin)		      2N2222A Collector (Right pin)		      Limits S8550 base current
-2. Chg Hold		Resistor 10k #3 (Pulldn)		1		  Lead 1 / Lead 2		        IRF9540N Gate + S8550 (C)		    Common GND		                        Holds Gate at 0V (ON) by default
-2. Chg Hold		PNP (S8550 / 2N2907)		    1		  E / B / C		              E -> IRM +Vo | B -> 10k #1/#2		C -> IRF9540N Gate (G)		            TO-92 Left-to-Right: E-B-C
-2. Chg Hold		P-MOSFET (IRF9540N)		      1		  G / D / S		              S -> IRM +Vo | G -> S8550 (C)		D -> A436 Charger IN+		              TO-220 Left-to-Right: G-D-S
-2. Charger		A436 CC/CV Buck-Boost		    1		  IN+ / IN-		              IN+ -> IRF9540N Drain (D)		    IN- & OUT- -> Common GND		          Pre-set to 14.85V / 1.00A
-2. Charger		Blocking 1N5822		          1		  Anode / Cathode		        A436 Charger OUT+		            4S LiFePO4 Bat (+)		                Silver stripe faces Battery (+)
-2. Sense		  Resistors (47k + 10k)		    2		  Divider R1 & R2		        Bat (+) (before diode) -> GND		Junction -> ESP32 GPIO 35		          Active Battery Sense (5.7x ratio)
-2. Sense		  Ceramic Cap (0.1uF)		      1		  Lead 1 / Lead 2		        ESP32 GPIO 35 node		          Common GND		                        Filters battery ADC noise
-3. 5V Rail		Input Caps (47uF + 0.1uF)		2		  + / -		                  +12V Main Bus		                Common GND		                        47uF white stripe (-) to GND
-3. 5V Rail		MP1584 Buck (5V Fixed)		  1		  IN+/- & OUT+/-		        IN+ <- +12V Bus		              OUT+ -> +5V Output (GND shared)		    Powers ESP32 VIN & 5V sensors
-3. 5V Rail		Output Caps (47uF + 0.1uF)	2		  + / -		                  +5V Output		                  Common GND		                        47uF white stripe (-) to GND
-4. Relay		  Resistor (1k Ohm)		        1		  Lead 1 / Lead 2		        ESP32 GPIO 32 (SOLENOID_RELAY)	2N2222A Base (Middle pin)		          Solenoid trigger input
-4. Relay		  NPN (2N2222A)		            1		  E / B / C		              E -> GND | B -> 1k Res		      C -> Relay Coil Pin 2 + 1N4148		    TO-92 Left-to-Right: E-B-C
-4. Relay		  Flyback 1N4148		          1		  Cathode / Anode		        +12V Main Bus (Black stripe)		2N2222A Collector (C)		              Black stripe faces +12V Bus
-4. Relay		  12V Relay (Riviera T73)		  1		  Coil 1 & 2 / COM & NO		  Coil 1 + COM <- +12V Bus		    Coil 2 -> 2N2222A (C) | NO -> SOL+		Leave NC pin empty
-4. Relay		  Flyback 1N5822		          1		  Cathode / Anode		        Solenoid (+) (NO pin)		        Common GND (Solenoid -)		            Silver stripe faces Solenoid (+)
-[FUTURE]		  AC Sense (47k+10k+0.1uF)		3		  Optional Production       IRM +Vo (before SR540) -> GND		Junction -> ESP32 GPIO 36 (VP)		    Leave unpopulated on prototype
-[FUTURE]		  12V Sense (47k+10k+0.1uF)		3		  Optional Production		    +12V Main Bus -> GND		        Junction -> ESP32 GPIO 33		          Leave unpopulated on prototype
-[FUTURE]		  5V Sense (10k+10k+0.1uF)		3		  Optional Production		    +5V Output -> GND		            Junction -> ESP32 GPIO 39 (VN)		    Leave unpopulated on prototype
+STAGE           COMPONENT                   QTY     PIN / LEAD                  SOURCE (FROM)                       DESTINATION (TO)                        NOTES / POLARITY
+1. AC In        Fuse (2.5A 250V)            1       Pin 1 / Pin 2               AC Live Inlet                       Varistor + X2 Cap + IRM AC/L            Must be first on Live wire
+1. AC In        Varistor (14D-471K)         1       Lead 1 / Lead 2             Filtered Live (after fuse)          Filtered Neutral (after NTC)            Non-polarized surge clamp
+1. AC In        NTC (10D-9)                 1       Lead 1 / Lead 2             AC Neutral Inlet                    Varistor + X2 Cap + IRM AC/N            Non-polarized inrush limiter
+1. AC In        X2 Cap (0.22uF 275VAC)      1       Lead 1 / Lead 2             Filtered Live                       Filtered Neutral                        Non-polarized EMI filter
+1. AC-DC        Mean Well IRM-20-12         1       AC/L & AC/N                 Filtered Live & Neutral             (Internal AC-DC Module)                 Keep 4mm+ gap from DC pads
+1. AC-DC        Mean Well IRM-20-12         -       +Vo / -Vo                   +Vo -> SR540 + LED + IRF9540N       -Vo -> Common GND                       Raw 12.0V AC-only rail
+2. ORing        Blocking SR540              1       Anode / Cathode             IRM-20-12 +Vo                       +12V Main Bus                           Silver stripe faces +12V Bus
+2. ORing        ORing SR540                 1       Anode / Cathode             4S LiFePO4 Bat (+)                  +12V Main Bus                           Silver stripe faces +12V Bus
+2. AC LED       Resistor (2.2k Ohm)         1       Lead 1 / Lead 2             IRM-20-12 +Vo (before diode)        AC Indicator LED Anode (+)              Or use two 1k resistors in series
+2. AC LED       Indicator LED (3mm/5mm)     1       Anode (+) / Cathode (-)     2.2k Resistor                       Common GND                              Lights only when AC is plugged in
+2. Chg Hold     Resistor (1k Ohm)           1       Lead 1 / Lead 2             ESP32 GPIO 2 (CHARGER_HOLD)         2N2222A Base (Middle pin)               Charger pause trigger input
+2. Chg Hold     NPN (2N2222A)               1       E / B / C                   E -> GND | B -> 1k Res              C -> 10k #2 to S8550 Base               TO-92 Left-to-Right: E-B-C
+2. Chg Hold     Resistor 10k #1 (Pullup)    1       Lead 1 / Lead 2             IRM-20-12 +Vo                       S8550 Base (Middle pin)                 Keeps S8550 OFF when GPIO 2 is LOW
+2. Chg Hold     Resistor 10k #2 (Limiter)   1       Lead 1 / Lead 2             S8550 Base (Middle pin)             2N2222A Collector (Right pin)           Limits S8550 base current
+2. Chg Hold     Resistor 10k #3 (Pulldn)    1       Lead 1 / Lead 2             IRF9540N Gate + S8550 (C)           Common GND                              Holds Gate at 0V (ON) by default
+2. Chg Hold     PNP (S8550 / 2N2907)        1       E / B / C                   E -> IRM +Vo | B -> 10k #1/#2       C -> IRF9540N Gate (G)                  TO-92 Left-to-Right: E-B-C
+2. Chg Hold     P-MOSFET (IRF9540N)         1       G / D / S                   S -> IRM +Vo | G -> S8550 (C)       D -> A436 Charger IN+                   TO-220 Left-to-Right: G-D-S
+2. Charger      A436 CC/CV Buck-Boost       1       IN+ / IN-                   IN+ -> IRF9540N Drain (D)           IN- & OUT- -> Common GND                Pre-set to 14.85V / 1.00A
+2. Charger      Blocking 1N5822             1       Anode / Cathode             A436 Charger OUT+                   4S LiFePO4 Bat (+)                      Silver stripe faces Battery (+)
+2. Sense        Resistors (47k + 10k)       2       Divider R1 & R2             Bat (+) (before diode) -> GND       Junction -> ESP32 GPIO 35               Active Battery Sense (5.7x ratio)
+2. Sense        Ceramic Cap (0.1uF)         1       Lead 1 / Lead 2             ESP32 GPIO 35 node                  Common GND                              Filters battery ADC noise
+3. 5V Rail      Input Caps (47uF + 0.1uF)   2       + / -                       +12V Main Bus                       Common GND                              47uF white stripe (-) to GND
+3. 5V Rail      MP1584 Buck (5V Fixed)      1       IN+/- & OUT+/-              IN+ <- +12V Bus                     OUT+ -> +5V Output (GND shared)         Powers ESP32 VIN & 5V sensors
+3. 5V Rail      Output Caps (47uF + 0.1uF)  2       + / -                       +5V Output                          Common GND                              47uF white stripe (-) to GND
+4. Relay        Resistor (1k Ohm)           1       Lead 1 / Lead 2             ESP32 GPIO 32 (SOLENOID_RELAY)      2N2222A Base (Middle pin)               Solenoid trigger input
+4. Relay        NPN (2N2222A)               1       E / B / C                   E -> GND | B -> 1k Res              C -> Relay Coil Pin 2 + 1N4148          TO-92 Left-to-Right: E-B-C
+4. Relay        Flyback 1N4148              1       Cathode / Anode             +12V Main Bus (Black stripe)        2N2222A Collector (C)                   Black stripe faces +12V Bus
+4. Relay        12V Relay (Riviera T73)     1       Coil 1 & 2 / COM & NO       Coil 1 + COM <- +12V Bus            Coil 2 -> 2N2222A (C) | NO -> SOL+      Leave NC pin empty
+4. Relay        Flyback 1N5822              1       Cathode / Anode             Solenoid (+) (NO pin)               Common GND (Solenoid -)                 Silver stripe faces Solenoid (+)
+[FUTURE]        AC Sense (47k+10k+0.1uF)    3       Optional Production         IRM +Vo (before SR540) -> GND       Junction -> ESP32 GPIO 36 (VP)          Leave unpopulated on prototype
+[FUTURE]        12V Sense (47k+10k+0.1uF)   3       Optional Production         +12V Main Bus -> GND                Junction -> ESP32 GPIO 33               Leave unpopulated on prototype
+[FUTURE]        5V Sense (10k+10k+0.1uF)    3       Optional Production         +5V Output -> GND                   Junction -> ESP32 GPIO 39 (VN)          Leave unpopulated on prototype
